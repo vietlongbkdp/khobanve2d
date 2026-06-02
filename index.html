@@ -255,10 +255,15 @@ function DetailPage({prod,go,buy}){
         <div style={{background:"#fff",borderRadius:16,padding:"22px 20px",boxShadow:"0 4px 20px rgba(15,23,42,.1)",border:"1px solid #E2E8F0"}}>
           {prod.free?(
             <><div style={{fontSize:28,fontWeight:800,color:"#059669",marginBottom:16}}>Miễn phí</div>
-            <button className="kbv-btn" onClick={async()=>{
-                try{const r=await fetch(`/api/get-download-link?orderId=FREE&productId=${prod.id}&amount=0`);
-                const d=await r.json();if(d.url)window.open(d.url,"_blank");}
-                catch(e){alert("Lỗi tải file, vui lòng thử lại.");}
+            <button className="kbv-btn" onClick={async(e)=>{
+                const btn=e.currentTarget;btn.disabled=true;btn.textContent="⏳ Đang tạo link…";
+                try{
+                  const r=await fetch(`/api/get-download-link?orderId=FREE&productId=${prod.id}&amount=0`);
+                  const d=await r.json();
+                  const url=d.token?`/api/download?token=${d.token}`:d.url;
+                  if(url){window.open(url,"_blank");btn.textContent="✅ Đã mở link tải!";}
+                  else{btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
+                }catch(e){btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
               }} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>📥 Tải File Ngay (Miễn Phí)</button></>
           ):(
             <><div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:6}}>
@@ -377,34 +382,50 @@ function PayPage({order,payState,setPayState,go}){
 }
 
 function SuccessPage({order,go}){
-  const [dlUrl,setDlUrl]=useState(null);const [dlLoading,setDlLoading]=useState(true);
+  const [dlUrl,setDlUrl]=useState(null);const [dlLoading,setDlLoading]=useState(true);const [dlError,setDlError]=useState(null);
   useEffect(()=>{
     if(!order)return;
-    const fetchLink=async()=>{
+    const fetchToken=async()=>{
       try{
         const res=await fetch(`/api/get-download-link?orderId=${order.id}&productId=${order.prod.id}&amount=${order.prod.price}`);
         const data=await res.json();
-        if(data.url){setDlUrl(data.url);setTimeout(()=>window.open(data.url,"_blank"),2500);}
-      }catch(e){console.error(e);}finally{setDlLoading(false);}
+        if(data.token){
+          // Mức 3: one-time token → /api/download?token=xxx
+          const tokenUrl=`/api/download?token=${data.token}`;
+          setDlUrl(tokenUrl);
+          setTimeout(()=>window.open(tokenUrl,"_blank"),2500);
+        } else if(data.url){
+          // Fallback mức 2 (KV chưa cấu hình)
+          setDlUrl(data.url);
+          setTimeout(()=>window.open(data.url,"_blank"),2500);
+        } else {
+          setDlError("Không lấy được link tải. Liên hệ khobanve2d@gmail.com");
+        }
+      }catch(e){setDlError("Lỗi kết nối server.");}finally{setDlLoading(false);}
     };
-    fetchLink();
+    fetchToken();
   },[order]);
   if(!order)return null;
   return(<div style={{maxWidth:540,margin:"60px auto",padding:"0 20px",textAlign:"center"}}>
     <div className="kbv-fadeup" style={{background:"#fff",borderRadius:20,padding:"48px 32px",boxShadow:"0 8px 40px rgba(15,23,42,.14)"}}>
       <div style={{fontSize:72,marginBottom:16}}>🎉</div>
       <div style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,color:"#059669",marginBottom:8}}>Thanh Toán Thành Công!</div>
-      <div style={{fontSize:15,color:"#64748B",marginBottom:24,lineHeight:1.7}}>Cảm ơn bạn đã mua bản vẽ.<br/>Đang tạo link tải xuống bảo mật…</div>
+      <div style={{fontSize:15,color:"#64748B",marginBottom:24,lineHeight:1.7}}>Cảm ơn bạn đã mua bản vẽ.<br/>Đang tạo link tải bảo mật — chỉ dùng được 1 lần.</div>
       <div style={{background:"#F0FDF4",borderRadius:14,padding:"18px 22px",marginBottom:24,border:"1px solid #BBF7D0"}}>
         <div style={{fontSize:13,color:"#64748B",marginBottom:8}}>📦 Đơn hàng</div>
         <div style={{fontWeight:700,color:"#0F172A",fontSize:14,lineHeight:1.5}}>{order.prod.title}</div>
         <div style={{fontSize:12,color:"#94A3B8",marginTop:4}}>Mã đơn: <b>{order.id}</b></div>
       </div>
       {dlLoading
-        ?<div style={{textAlign:"center",padding:"12px",color:"#64748B",fontSize:13}}>⏳ Đang tạo link tải…</div>
-        :dlUrl
-          ?<button className="kbv-btn" onClick={()=>window.open(dlUrl,"_blank")} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>📥 Tải File Ngay</button>
-          :<div style={{textAlign:"center",padding:"12px",color:"#EF4444",fontSize:13}}>⚠️ Lỗi tải link — liên hệ khobanve2d@gmail.com</div>
+        ?<div style={{textAlign:"center",padding:"16px",color:"#64748B",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          <span style={{display:"inline-block",width:16,height:16,border:"2px solid #2563EB",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+          Đang tạo link tải bảo mật…
+         </div>
+        :dlError
+          ?<div style={{textAlign:"center",padding:"12px",color:"#EF4444",fontSize:13,lineHeight:1.6}}>{dlError}</div>
+          :dlUrl
+            ?<button className="kbv-btn" onClick={()=>window.open(dlUrl,"_blank")} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>📥 Tải File Ngay</button>
+            :<div style={{textAlign:"center",padding:"12px",color:"#EF4444",fontSize:13}}>⚠️ Không lấy được link — liên hệ khobanve2d@gmail.com</div>
       }
       <button onClick={()=>go("home")} style={{width:"100%",background:"none",border:"1.5px solid #E2E8F0",color:"#64748B",borderRadius:12,padding:"13px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>← Về Trang Chủ</button>
       <p style={{fontSize:11.5,color:"#94A3B8",marginTop:16}}>File sẽ tự động mở sau 3 giây.</p>
