@@ -4,7 +4,7 @@
  * Kiểm tra thanh toán tự động qua SePay API
  *
  * Setup:
- *  1. Đăng ký tại https://sepay.vn → Kết nối tài khoản BIDV
+ *  1. Đăng ký tại https://sepay.vn → Kết nối tài khoản VPBank
  *  2. Lấy API Token tại: My SePay → API → Token
  *  3. Thêm vào Vercel: Settings → Environment Variables → SEPAY_API_TOKEN
  *
@@ -35,9 +35,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Lấy 30 giao dịch gần nhất của tài khoản BIDV
+    // Lấy 30 giao dịch gần nhất của tài khoản VPBank
     const sePayRes = await fetch(
-      "https://my.sepay.vn/userapi/transactions/list?account_number=5601440258&limit=30",
+      "https://my.sepay.vn/userapi/transactions/list?account_number=0913331916&limit=30",
       {
         headers: {
           Authorization: `Bearer ${SEPAY_TOKEN}`,

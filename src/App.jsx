@@ -60,7 +60,7 @@ const PRODS = [
 const vnd = (n) => n.toLocaleString("vi-VN") + "đ";
 const genOid = () => "KBV" + Date.now().toString(36).toUpperCase().slice(-6);
 const qrURL = (amt, ref) =>
-  `https://img.vietqr.io/image/BIDV-5601440258-compact2.png?amount=${amt}&addInfo=${encodeURIComponent(ref)}&accountName=${encodeURIComponent("NGUYEN VIET LONG")}`;
+  `https://img.vietqr.io/image/VPB-0913331916-compact2.png?amount=${amt}&addInfo=${encodeURIComponent(ref)}&accountName=${encodeURIComponent("NGUYEN VIET LONG")}`;
 const catOf = (id) => CATS.find((c) => c.id === id);
 
 /* ══════════════════════════════════════════════════════
@@ -246,9 +246,9 @@ function PayPage({ order, payState, setPayState, go }) {
               <div style={{ background: "#F8FAFC", borderRadius: 12, padding: "14px 20px", margin: "16px 0", textAlign: "left", border: "1px solid #E2E8F0" }}>
                 <div style={{ fontSize: 11.5, color: "#64748B", fontWeight: 600, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.4 }}>Thông tin chuyển khoản</div>
                 {[
-                  ["🏦 Ngân hàng", "BIDV"],
+                  ["🏦 Ngân hàng", "VPBank"],
                   ["👤 Chủ TK",    "NGUYEN VIET LONG"],
-                  ["💳 Số TK",     "5601440258"],
+                  ["💳 Số TK",     "0913331916"],
                   ["💰 Số tiền",   <b style={{ color: "#1D4ED8" }}>{vnd(prod.price)}</b>],
                   ["📝 Nội dung",  <b style={{ color: "#DC2626", userSelect: "all" }}>{id}</b>],
                 ].map(([k, v], i) => (

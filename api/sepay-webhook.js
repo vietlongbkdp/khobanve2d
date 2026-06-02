@@ -24,9 +24,9 @@ export default async function handler(req, res) {
     // SePay webhook payload format:
     // {
     //   id: "123456",
-    //   gateway: "BIDV",
+    //   gateway: "VPBank",
     //   transactionDate: "2024-01-15 14:30:00",
-    //   accountNumber: "5601440258",
+    //   accountNumber: "0913331916",
     //   code: null,
     //   content: "KBV3F2A1B thanh toan ban ve",
     //   transferType: "in",
@@ -39,8 +39,8 @@ export default async function handler(req, res) {
 
     const { content, transferAmount, transferType, accountNumber } = body;
 
-    // Chỉ xử lý giao dịch tiền vào tài khoản BIDV của mình
-    if (transferType !== "in" || accountNumber !== "5601440258") {
+    // Chỉ xử lý giao dịch tiền vào tài khoản VPBank của mình
+    if (transferType !== "in" || accountNumber !== "0913331916") {
       return res.status(200).json({ success: true, processed: false });
     }
 

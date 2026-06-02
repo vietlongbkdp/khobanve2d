@@ -8,7 +8,7 @@
 
 ## ⚙️ Cấu hình thanh toán tự động (SePay)
 
-1. Đăng ký tại [sepay.vn](https://sepay.vn) → kết nối tài khoản BIDV
+1. Đăng ký tại [sepay.vn](https://sepay.vn) → kết nối tài khoản VPBank
 2. Lấy API Token
 3. Thêm vào Vercel → Settings → Environment Variables:
    ```
@@ -31,8 +31,8 @@
 
 ## 💳 Thông tin thanh toán
 
-- Ngân hàng: **BIDV**
-- Số TK: **5601440258**
+- Ngân hàng: **VPBank**
+- Số TK: **0913331916**
 - Chủ TK: **NGUYEN VIET LONG**
 
 ---
