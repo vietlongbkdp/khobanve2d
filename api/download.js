@@ -1,11 +1,8 @@
 /**
  * /api/download.js
- * Nhận HMAC token → verify chữ ký + thời gian → redirect tải file
- * Token hết hạn sau 15 phút. Không cần database.
- *
- * URL: GET /api/download?token=abc123...
+ * Verify HMAC token (có chứa driveFileId) → redirect tải file
+ * Token format: productId:driveFileId:orderId:expiry:sig
  */
-
 const crypto = require("crypto");
 
 function verifyToken(token) {
@@ -13,38 +10,21 @@ function verifyToken(token) {
     const secret  = process.env.TOKEN_SECRET || "change-me-in-vercel";
     const decoded = Buffer.from(token, "base64url").toString("utf8");
     const parts   = decoded.split(":");
-    if (parts.length !== 4) return null;
-
-    const [productId, orderId, expiry, sig] = parts;
-
-    // Kiểm tra hết hạn
+    if (parts.length !== 5) return null;
+    const [productId, driveFileId, orderId, expiry, sig] = parts;
     if (Date.now() > parseInt(expiry)) return null;
-
-    // Kiểm tra chữ ký
-    const payload  = `${productId}:${orderId}:${expiry}`;
+    const payload  = `${productId}:${driveFileId}:${orderId}:${expiry}`;
     const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex").slice(0, 32);
     if (sig !== expected) return null;
-
-    return { productId };
-  } catch {
-    return null;
-  }
+    return { driveFileId };
+  } catch { return null; }
 }
 
 module.exports = async function handler(req, res) {
   const { token } = req.query;
   if (!token) return res.status(400).send(page("Link không hợp lệ", "Không tìm thấy token."));
 
-  const DRIVE_FILES_RAW = process.env.DRIVE_FILES;
-  if (!DRIVE_FILES_RAW) return res.status(500).send(page("Lỗi cấu hình", "Server chưa cấu hình."));
-
-  let driveFiles;
-  try { driveFiles = JSON.parse(DRIVE_FILES_RAW); }
-  catch { return res.status(500).send(page("Lỗi cấu hình", "DRIVE_FILES không hợp lệ.")); }
-
-  // ── Verify token ──
   const payload = verifyToken(token);
-
   if (!payload) {
     return res.status(410).send(page(
       "Link đã hết hạn",
@@ -52,13 +32,12 @@ module.exports = async function handler(req, res) {
     ));
   }
 
-  const fileId = driveFiles[payload.productId];
-  if (!fileId || fileId.startsWith("THAY_FILE_ID")) {
-    return res.status(404).send(page("File chưa sẵn sàng", "Admin chưa cập nhật file này.<br/>Liên hệ <b>khobanve2d@gmail.com</b>."));
+  const { driveFileId } = payload;
+  if (!driveFileId || driveFileId.startsWith("THAY")) {
+    return res.status(404).send(page("File chưa sẵn sàng", "Admin chưa cập nhật file.<br/>Liên hệ <b>khobanve2d@gmail.com</b>."));
   }
 
-  // ── Redirect tải thẳng ──
-  return res.redirect(302, `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`);
+  return res.redirect(302, `https://drive.google.com/uc?export=download&id=${driveFileId}&confirm=t`);
 };
 
 function page(title, msg) {
