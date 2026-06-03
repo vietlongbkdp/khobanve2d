@@ -1,38 +1,29 @@
 /**
  * /api/download.js
- * Nhận one-time token → verify KV → XÓA token → redirect tải file.
- * Token chỉ dùng 1 lần, hết hạn sau 15 phút.
+ * Nhận token → tìm trong MongoDB → XÓA ngay (single-use) → redirect tải file
  *
  * URL: GET /api/download?token=abc123...
  */
 
-async function kvGet(url, token, key) {
-  const res = await fetch(
-    `${url}/get/${encodeURIComponent(key)}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.result || null;
-}
+const { MongoClient } = require("mongodb");
 
-async function kvDel(url, token, key) {
-  await fetch(
-    `${url}/del/${encodeURIComponent(key)}`,
-    { method: "POST", headers: { Authorization: `Bearer ${token}` } }
-  );
+let _client = null;
+async function getDB() {
+  if (!_client) {
+    _client = new MongoClient(process.env.MONGODB_URL);
+    await _client.connect();
+  }
+  return _client.db("khobanve2d").collection("tokens");
 }
 
 module.exports = async function handler(req, res) {
   const { token } = req.query;
-
   if (!token) return res.status(400).send(page("Link không hợp lệ", "Không tìm thấy token."));
 
   const DRIVE_FILES_RAW = process.env.DRIVE_FILES;
-  const KV_URL          = process.env.KV_REST_API_URL;
-  const KV_TOKEN        = process.env.KV_REST_API_TOKEN;
+  const MONGO_URL       = process.env.MONGODB_URL;
 
-  if (!DRIVE_FILES_RAW || !KV_URL || !KV_TOKEN) {
+  if (!DRIVE_FILES_RAW || !MONGO_URL) {
     return res.status(500).send(page("Lỗi cấu hình", "Server chưa cấu hình đầy đủ."));
   }
 
@@ -40,29 +31,32 @@ module.exports = async function handler(req, res) {
   try { driveFiles = JSON.parse(DRIVE_FILES_RAW); }
   catch { return res.status(500).send(page("Lỗi cấu hình", "DRIVE_FILES không hợp lệ.")); }
 
-  // ── Lấy token từ KV ──
-  const value = await kvGet(KV_URL, KV_TOKEN, `dltoken:${token}`);
+  try {
+    const col = await getDB();
 
-  if (!value) {
-    return res.status(410).send(page(
-      "Link đã hết hạn hoặc đã được sử dụng",
-      "Mỗi link chỉ dùng được <b>1 lần</b> trong 15 phút.<br/>Liên hệ <b>khobanve2d@gmail.com</b> nếu cần hỗ trợ."
-    ));
+    // Tìm VÀ XÓA token trong 1 lệnh — đảm bảo single-use tuyệt đối
+    const doc = await col.findOneAndDelete({ token });
+
+    if (!doc) {
+      return res.status(410).send(page(
+        "Link đã hết hạn hoặc đã được sử dụng",
+        "Mỗi link chỉ dùng được <b>1 lần</b> trong 15 phút.<br/>Liên hệ <b>khobanve2d@gmail.com</b> nếu cần hỗ trợ."
+      ));
+    }
+
+    const fileId = driveFiles[doc.productId];
+
+    if (!fileId || fileId.startsWith("THAY_FILE_ID")) {
+      return res.status(404).send(page("File chưa sẵn sàng", "Admin chưa cập nhật file này.<br/>Liên hệ <b>khobanve2d@gmail.com</b>."));
+    }
+
+    // Redirect tải thẳng
+    return res.redirect(302, `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`);
+
+  } catch (err) {
+    console.error("[download]", err.message);
+    return res.status(500).send(page("Lỗi server", "Vui lòng thử lại hoặc liên hệ khobanve2d@gmail.com."));
   }
-
-  // ── XÓA token ngay — single use ──
-  await kvDel(KV_URL, KV_TOKEN, `dltoken:${token}`);
-
-  // ── Lấy file ID ──
-  const [productId] = value.split(":");
-  const fileId = driveFiles[productId];
-
-  if (!fileId || fileId.startsWith("THAY_FILE_ID")) {
-    return res.status(404).send(page("File chưa sẵn sàng", "Admin chưa cập nhật file này.<br/>Liên hệ <b>khobanve2d@gmail.com</b>."));
-  }
-
-  // ── Redirect tải thẳng ──
-  return res.redirect(302, `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`);
 };
 
 function page(title, msg) {

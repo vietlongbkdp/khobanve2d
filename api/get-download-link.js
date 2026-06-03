@@ -1,19 +1,24 @@
 /**
  * /api/get-download-link.js
- * Verify SePay → tạo one-time token → lưu Vercel KV (TTL 15 phút)
+ * Verify SePay → tạo one-time token → lưu MongoDB (TTL 15 phút)
  *
- * Env vars: SEPAY_API_TOKEN, DRIVE_FILES (JSON), KV_REST_API_URL, KV_REST_API_TOKEN
- * URL: GET /api/get-download-link?orderId=KBVxxxxxx&productId=p01&amount=50000
+ * Env vars: SEPAY_API_TOKEN, DRIVE_FILES (JSON), MONGODB_URL
  */
 
 const crypto = require("crypto");
+const { MongoClient } = require("mongodb");
 
-async function kvSet(url, token, key, value, ttl) {
-  const res = await fetch(
-    `${url}/set/${encodeURIComponent(key)}/${encodeURIComponent(value)}?ex=${ttl}`,
-    { method: "POST", headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res.ok;
+let _client = null;
+async function getDB() {
+  if (!_client) {
+    _client = new MongoClient(process.env.MONGODB_URL);
+    await _client.connect();
+  }
+  const db = _client.db("khobanve2d");
+  // Tạo TTL index nếu chưa có (tự xóa sau 900 giây)
+  const col = db.collection("tokens");
+  await col.createIndex({ createdAt: 1 }, { expireAfterSeconds: 900 });
+  return col;
 }
 
 module.exports = async function handler(req, res) {
@@ -25,9 +30,7 @@ module.exports = async function handler(req, res) {
 
   const SEPAY_TOKEN     = process.env.SEPAY_API_TOKEN;
   const DRIVE_FILES_RAW = process.env.DRIVE_FILES;
-  const KV_URL          = process.env.KV_REST_API_URL;
-  const KV_TOKEN        = process.env.KV_REST_API_TOKEN;
-  const kvReady         = !!(KV_URL && KV_TOKEN);
+  const MONGO_URL       = process.env.MONGODB_URL;
 
   if (!DRIVE_FILES_RAW) return res.status(500).json({ error: "DRIVE_FILES not configured" });
 
@@ -37,16 +40,25 @@ module.exports = async function handler(req, res) {
 
   if (!driveFiles[productId]) return res.status(404).json({ error: "Product not found" });
 
+  // ── Helper: tạo và lưu token ──
+  async function createToken(label) {
+    const token = crypto.randomBytes(24).toString("hex");
+    if (MONGO_URL) {
+      try {
+        const col = await getDB();
+        await col.insertOne({ token, productId, label, createdAt: new Date() });
+        return { token };
+      } catch (e) {
+        console.error("MongoDB error:", e.message);
+      }
+    }
+    // Fallback: trả URL thẳng nếu MongoDB chưa kết nối
+    return { url: `https://drive.google.com/uc?export=download&id=${driveFiles[productId]}&confirm=t`, warning: "MongoDB not connected" };
+  }
+
   // ── Sản phẩm miễn phí ──
   if (parseFloat(amount) === 0) {
-    if (kvReady) {
-      const token = crypto.randomBytes(24).toString("hex");
-      await kvSet(KV_URL, KV_TOKEN, `dltoken:${token}`, `${productId}:FREE`, 900);
-      return res.status(200).json({ token });
-    }
-    return res.status(200).json({
-      url: `https://drive.google.com/uc?export=download&id=${driveFiles[productId]}&confirm=t`
-    });
+    return res.status(200).json(await createToken("FREE"));
   }
 
   if (!SEPAY_TOKEN) return res.status(500).json({ error: "SEPAY_API_TOKEN not configured" });
@@ -68,20 +80,7 @@ module.exports = async function handler(req, res) {
 
     if (!matched) return res.status(402).json({ error: "Payment not found" });
 
-    // ── Tạo one-time token ──
-    const token = crypto.randomBytes(24).toString("hex");
-
-    if (kvReady) {
-      const ok = await kvSet(KV_URL, KV_TOKEN, `dltoken:${token}`, `${productId}:${orderId}`, 900);
-      if (!ok) return res.status(500).json({ error: "Token save failed" });
-      return res.status(200).json({ token, expires: 900 });
-    }
-
-    // Fallback nếu KV chưa cấu hình
-    return res.status(200).json({
-      url: `https://drive.google.com/uc?export=download&id=${driveFiles[productId]}&confirm=t`,
-      warning: "KV not configured"
-    });
+    return res.status(200).json(await createToken(orderId));
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
