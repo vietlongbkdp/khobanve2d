@@ -1,19 +1,34 @@
 /**
  * /api/download.js
- * Nhận token → tìm trong MongoDB → XÓA ngay (single-use) → redirect tải file
+ * Nhận HMAC token → verify chữ ký + thời gian → redirect tải file
+ * Token hết hạn sau 15 phút. Không cần database.
  *
  * URL: GET /api/download?token=abc123...
  */
 
-const { MongoClient } = require("mongodb");
+const crypto = require("crypto");
 
-let _client = null;
-async function getDB() {
-  if (!_client) {
-    _client = new MongoClient(process.env.MONGODB_URL);
-    await _client.connect();
+function verifyToken(token) {
+  try {
+    const secret  = process.env.TOKEN_SECRET || "change-me-in-vercel";
+    const decoded = Buffer.from(token, "base64url").toString("utf8");
+    const parts   = decoded.split(":");
+    if (parts.length !== 4) return null;
+
+    const [productId, orderId, expiry, sig] = parts;
+
+    // Kiểm tra hết hạn
+    if (Date.now() > parseInt(expiry)) return null;
+
+    // Kiểm tra chữ ký
+    const payload  = `${productId}:${orderId}:${expiry}`;
+    const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex").slice(0, 32);
+    if (sig !== expected) return null;
+
+    return { productId };
+  } catch {
+    return null;
   }
-  return _client.db("khobanve2d").collection("tokens");
 }
 
 module.exports = async function handler(req, res) {
@@ -21,42 +36,29 @@ module.exports = async function handler(req, res) {
   if (!token) return res.status(400).send(page("Link không hợp lệ", "Không tìm thấy token."));
 
   const DRIVE_FILES_RAW = process.env.DRIVE_FILES;
-  const MONGO_URL       = process.env.MONGODB_URL;
-
-  if (!DRIVE_FILES_RAW || !MONGO_URL) {
-    return res.status(500).send(page("Lỗi cấu hình", "Server chưa cấu hình đầy đủ."));
-  }
+  if (!DRIVE_FILES_RAW) return res.status(500).send(page("Lỗi cấu hình", "Server chưa cấu hình."));
 
   let driveFiles;
   try { driveFiles = JSON.parse(DRIVE_FILES_RAW); }
   catch { return res.status(500).send(page("Lỗi cấu hình", "DRIVE_FILES không hợp lệ.")); }
 
-  try {
-    const col = await getDB();
+  // ── Verify token ──
+  const payload = verifyToken(token);
 
-    // Tìm VÀ XÓA token trong 1 lệnh — đảm bảo single-use tuyệt đối
-    const doc = await col.findOneAndDelete({ token });
-
-    if (!doc) {
-      return res.status(410).send(page(
-        "Link đã hết hạn hoặc đã được sử dụng",
-        "Mỗi link chỉ dùng được <b>1 lần</b> trong 15 phút.<br/>Liên hệ <b>khobanve2d@gmail.com</b> nếu cần hỗ trợ."
-      ));
-    }
-
-    const fileId = driveFiles[doc.productId];
-
-    if (!fileId || fileId.startsWith("THAY_FILE_ID")) {
-      return res.status(404).send(page("File chưa sẵn sàng", "Admin chưa cập nhật file này.<br/>Liên hệ <b>khobanve2d@gmail.com</b>."));
-    }
-
-    // Redirect tải thẳng
-    return res.redirect(302, `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`);
-
-  } catch (err) {
-    console.error("[download]", err.message);
-    return res.status(500).send(page("Lỗi server", "Vui lòng thử lại hoặc liên hệ khobanve2d@gmail.com."));
+  if (!payload) {
+    return res.status(410).send(page(
+      "Link đã hết hạn",
+      "Link tải chỉ có hiệu lực <b>15 phút</b> sau khi thanh toán.<br/>Liên hệ <b>khobanve2d@gmail.com</b> nếu cần hỗ trợ."
+    ));
   }
+
+  const fileId = driveFiles[payload.productId];
+  if (!fileId || fileId.startsWith("THAY_FILE_ID")) {
+    return res.status(404).send(page("File chưa sẵn sàng", "Admin chưa cập nhật file này.<br/>Liên hệ <b>khobanve2d@gmail.com</b>."));
+  }
+
+  // ── Redirect tải thẳng ──
+  return res.redirect(302, `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`);
 };
 
 function page(title, msg) {

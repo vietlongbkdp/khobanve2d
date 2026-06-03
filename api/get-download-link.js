@@ -1,24 +1,19 @@
 /**
  * /api/get-download-link.js
- * Verify SePay → tạo one-time token → lưu MongoDB (TTL 15 phút)
+ * Verify SePay → tạo HMAC signed token (không cần database)
  *
- * Env vars: SEPAY_API_TOKEN, DRIVE_FILES (JSON), MONGODB_URL
+ * Env vars: SEPAY_API_TOKEN, DRIVE_FILES (JSON), TOKEN_SECRET
+ * URL: GET /api/get-download-link?orderId=KBVxxxxxx&productId=p01&amount=50000
  */
 
 const crypto = require("crypto");
-const { MongoClient } = require("mongodb");
 
-let _client = null;
-async function getDB() {
-  if (!_client) {
-    _client = new MongoClient(process.env.MONGODB_URL);
-    await _client.connect();
-  }
-  const db = _client.db("khobanve2d");
-  // Tạo TTL index nếu chưa có (tự xóa sau 900 giây)
-  const col = db.collection("tokens");
-  await col.createIndex({ createdAt: 1 }, { expireAfterSeconds: 900 });
-  return col;
+function createToken(productId, orderId) {
+  const secret  = process.env.TOKEN_SECRET || "change-me-in-vercel";
+  const expiry  = Date.now() + 15 * 60 * 1000; // hết hạn sau 15 phút
+  const payload = `${productId}:${orderId}:${expiry}`;
+  const sig     = crypto.createHmac("sha256", secret).update(payload).digest("hex").slice(0, 32);
+  return Buffer.from(`${payload}:${sig}`).toString("base64url");
 }
 
 module.exports = async function handler(req, res) {
@@ -28,10 +23,7 @@ module.exports = async function handler(req, res) {
   const { orderId, productId, amount } = req.query;
   if (!orderId || !productId) return res.status(400).json({ error: "Missing params" });
 
-  const SEPAY_TOKEN     = process.env.SEPAY_API_TOKEN;
   const DRIVE_FILES_RAW = process.env.DRIVE_FILES;
-  const MONGO_URL       = process.env.MONGODB_URL;
-
   if (!DRIVE_FILES_RAW) return res.status(500).json({ error: "DRIVE_FILES not configured" });
 
   let driveFiles;
@@ -40,30 +32,15 @@ module.exports = async function handler(req, res) {
 
   if (!driveFiles[productId]) return res.status(404).json({ error: "Product not found" });
 
-  // ── Helper: tạo và lưu token ──
-  async function createToken(label) {
-    const token = crypto.randomBytes(24).toString("hex");
-    if (MONGO_URL) {
-      try {
-        const col = await getDB();
-        await col.insertOne({ token, productId, label, createdAt: new Date() });
-        return { token };
-      } catch (e) {
-        console.error("MongoDB error:", e.message);
-      }
-    }
-    // Fallback: trả URL thẳng nếu MongoDB chưa kết nối
-    return { url: `https://drive.google.com/uc?export=download&id=${driveFiles[productId]}&confirm=t`, warning: "MongoDB not connected" };
-  }
-
   // ── Sản phẩm miễn phí ──
   if (parseFloat(amount) === 0) {
-    return res.status(200).json(await createToken("FREE"));
+    return res.status(200).json({ token: createToken(productId, "FREE"), expires: 900 });
   }
 
+  const SEPAY_TOKEN = process.env.SEPAY_API_TOKEN;
   if (!SEPAY_TOKEN) return res.status(500).json({ error: "SEPAY_API_TOKEN not configured" });
 
-  // ── Xác minh SePay ──
+  // ── Xác minh thanh toán với SePay ──
   try {
     const sePayRes = await fetch(
       "https://my.sepay.vn/userapi/transactions/list?account_number=0913331916&limit=50",
@@ -71,7 +48,7 @@ module.exports = async function handler(req, res) {
     );
     if (!sePayRes.ok) return res.status(502).json({ error: "SePay API error" });
 
-    const data = await sePayRes.json();
+    const data    = await sePayRes.json();
     const matched = (data.transactions || []).find((tx) => {
       const content  = (tx.transaction_content || "").toUpperCase();
       const txAmount = parseFloat(tx.amount_in || 0);
@@ -80,7 +57,7 @@ module.exports = async function handler(req, res) {
 
     if (!matched) return res.status(402).json({ error: "Payment not found" });
 
-    return res.status(200).json(await createToken(orderId));
+    return res.status(200).json({ token: createToken(productId, orderId), expires: 900 });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
