@@ -49,21 +49,7 @@ const CATS=[
   {id:"do-an",label:"Đồ Án",emoji:"📐",color:"#D97706",bg:"#FEF3C7",count:142},
   {id:"xay-dung",label:"Thi Công XD",emoji:"🏗️",color:"#0284C7",bg:"#E0F2FE",count:68},
 ];
-const PRODS=[
-  {id:"p01",cat:"kien-truc",title:"Nhà Phố 2 Tầng 5×15m — Full KT + KC + Điện Nước",price:50000,oldPrice:80000,desc:"Bộ hồ sơ 12 bản vẽ hoàn chỉnh nhà phố 2 tầng 5×15m: mặt bằng, mặt đứng, mặt cắt, kết cấu móng-sàn-mái, sơ đồ điện, cấp thoát nước. DWG AutoCAD 2020.",ft:"DWG AutoCAD 2020",fc:12,dl:247,rate:4.8,rev:38,fileId:"THAY_FILE_ID_1",free:false,hot:true,isNew:true,tags:["nhà phố","2 tầng","5x15m","full bộ"]},
-  {id:"p02",cat:"co-khi",title:"Hộp Giảm Tốc Bánh Răng Trụ 2 Cấp — Đồ Án CTM",price:35000,oldPrice:60000,desc:"Đồ án chi tiết máy HGT bánh răng trụ 2 cấp đầy đủ: bản vẽ lắp, chi tiết trục-bánh răng-ổ lăn, sơ đồ động học, thuyết minh tính toán.",ft:"DWG + PDF",fc:8,dl:183,rate:4.9,rev:27,fileId:"THAY_FILE_ID_2",free:false,hot:true,isNew:false,tags:["hộp giảm tốc","chi tiết máy"]},
-  {id:"p03",cat:"kien-truc",title:"Biệt Thự 3 Tầng 10×12m — Phong Cách Hiện Đại",price:75000,oldPrice:120000,desc:"18 bản vẽ biệt thự 3 tầng 10×12m: kiến trúc, kết cấu BTCT, MEP. Chất lượng hồ sơ xin phép xây dựng.",ft:"DWG AutoCAD",fc:18,dl:89,rate:4.7,rev:14,fileId:"THAY_FILE_ID_3",free:false,hot:true,isNew:false,tags:["biệt thự","3 tầng","hiện đại"]},
-  {id:"p04",cat:"cong",title:"20 Mẫu Cổng Sắt Nghệ Thuật — DWG Lazer CNC",price:0,oldPrice:null,desc:"20 mẫu cổng sắt nghệ thuật, sẵn xuất CNC/lazer. DWG kích thước chi tiết đầy đủ.",ft:"DWG AutoCAD",fc:5,dl:512,rate:4.6,rev:72,fileId:"THAY_FILE_ID_4",free:true,hot:false,isNew:false,tags:["cổng sắt","lazer","miễn phí"]},
-  {id:"p05",cat:"lazer",title:"50 Mẫu Hoa Văn Đông Nam Á — Lazer Cắt CNC",price:45000,oldPrice:70000,desc:"50 mẫu hoa văn ĐNA cho lazer cắt, trần thạch cao, vách ngăn trang trí. DWG + DXF xuất CNC trực tiếp.",ft:"DWG + DXF",fc:6,dl:334,rate:4.9,rev:51,fileId:"THAY_FILE_ID_5",free:false,hot:true,isNew:true,tags:["lazer","hoa văn","CNC"]},
-  {id:"p06",cat:"do-an",title:"Đồ Án KT Chung Cư Mini 5 Tầng — Full Bộ",price:40000,oldPrice:null,desc:"Đồ án kiến trúc chung cư mini 5 tầng: mặt bằng, mặt đứng, mặt cắt, phối cảnh. DWG + Sketchup.",ft:"DWG + Sketchup",fc:15,dl:201,rate:4.7,rev:31,fileId:"THAY_FILE_ID_6",free:false,hot:false,isNew:false,tags:["đồ án","chung cư","kiến trúc"]},
-  {id:"p07",cat:"xay-dung",title:"Biện Pháp Thi Công Móng Cọc Khoan Nhồi",price:0,oldPrice:null,desc:"Bộ bản vẽ BPTC móng cọc khoan nhồi chi tiết: sơ đồ thiết bị, trình tự các bước, ATLĐ.",ft:"DWG AutoCAD",fc:7,dl:423,rate:4.5,rev:61,fileId:"THAY_FILE_ID_7",free:true,hot:false,isNew:false,tags:["thi công","móng cọc","miễn phí"]},
-  {id:"p08",cat:"co-khi",title:"30 Chi Tiết Máy Thông Dụng — Sẵn Xuất CNC",price:30000,oldPrice:50000,desc:"30 bản vẽ chi tiết máy: trục, bạc, then. Kích thước dung sai đầy đủ, xuất CNC trực tiếp.",ft:"DWG AutoCAD",fc:10,dl:156,rate:4.6,rev:22,fileId:"THAY_FILE_ID_8",free:false,hot:false,isNew:false,tags:["chi tiết máy","CNC"]},
-  {id:"p09",cat:"kien-truc",title:"Nhà Xưởng Khung Thép 12×24m — Kết Cấu Full",price:60000,oldPrice:90000,desc:"Bản vẽ nhà xưởng khung thép nhịp 12m dài 24m: móng, cột, xà, liên kết, mái tôn.",ft:"DWG AutoCAD",fc:10,dl:156,rate:4.8,rev:19,fileId:"THAY_FILE_ID_9",free:false,hot:false,isNew:false,tags:["nhà xưởng","khung thép"]},
-  {id:"p10",cat:"lazer",title:"30 Mẫu Hoa Văn Trần Thạch Cao — CNC",price:35000,oldPrice:55000,desc:"30 mẫu hoa văn trần thạch cao CNC: tân cổ điển, hiện đại, Địa Trung Hải. DWG + DXF.",ft:"DWG + DXF",fc:4,dl:289,rate:4.8,rev:44,fileId:"THAY_FILE_ID_10",free:false,hot:false,isNew:true,tags:["hoa văn","trần thạch cao"]},
-  {id:"p11",cat:"cong",title:"Hàng Rào Hoa Văn 15 Mẫu — File DWG CNC",price:25000,oldPrice:40000,desc:"15 mẫu hàng rào hoa văn đẹp, đầy đủ kích thước, sẵn xuất CNC lazer.",ft:"DWG AutoCAD",fc:3,dl:178,rate:4.7,rev:33,fileId:"THAY_FILE_ID_11",free:false,hot:false,isNew:false,tags:["hàng rào","lazer"]},
-  {id:"p12",cat:"do-an",title:"Đồ Án Cơ Khí Máy Ép Thủy Lực 10T",price:45000,oldPrice:70000,desc:"Đồ án máy ép thủy lực 10 tấn: bản vẽ lắp, chi tiết xy-lanh, thuyết minh tính toán.",ft:"DWG + PDF",fc:11,dl:112,rate:4.8,rev:17,fileId:"THAY_FILE_ID_12",free:false,hot:false,isNew:true,tags:["đồ án","thủy lực"]},
-];
-
+const PRODS=[];
 /* ── HELPERS ── */
 const vnd=n=>n.toLocaleString("vi-VN")+"đ";
 const genOid=()=>"KBV"+Date.now().toString(36).toUpperCase().slice(-6);
@@ -75,10 +61,10 @@ function Stars({r}){return(<span style={{fontSize:12}}>{[1,2,3,4,5].map(i=><span
 function Badge({label,color,bg}){return<span style={{display:"inline-block",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:bg,color,letterSpacing:.3}}>{label}</span>;}
 
 function ProductCard({p,onOpen}){
-  const cat=catOf(p.cat);const disc=p.oldPrice?Math.round((1-p.price/p.oldPrice)*100):0;
+  const cat=catOf(p.cat||p.category);const disc=p.oldPrice?Math.round((1-p.price/p.oldPrice)*100):0;
   return(<div className="kbv-card" onClick={()=>onOpen(p)} style={{background:"#fff",borderRadius:14,overflow:"hidden",boxShadow:"0 2px 12px rgba(15,23,42,.08)",cursor:"pointer",position:"relative"}}>
     <div style={{position:"relative",overflow:"hidden",height:185}}>
-      <img src={getBP(p.cat)} alt={p.title} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+      <img src={(p.images&&p.images[0])||getBP(p.cat||p.category)} alt={p.title} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
       <div style={{position:"absolute",bottom:0,left:0,right:0,height:3,background:cat?.color||"#2563EB"}}/>
       <div style={{position:"absolute",top:10,left:10,display:"flex",flexDirection:"column",gap:5}}>
         {p.free&&<Badge label="MIỄN PHÍ" color="#fff" bg="#059669"/>}
@@ -184,7 +170,7 @@ function HomePage({go}){
 function ShopPage({go,catFilter,setCatFilter,query,setQuery,prods=PRODS}){
   const [pf,setPf]=useState("all");
   const filtered=prods.filter(p=>{
-    const bc=catFilter==="all"||p.cat===catFilter;
+    const bc=catFilter==="all"||(p.cat||p.category)===catFilter;
     const bp=pf==="all"||(pf==="free"?p.free:!p.free);
     const bq=!query||p.title.toLowerCase().includes(query.toLowerCase());
     return bc&&bp&&bq;
@@ -220,15 +206,31 @@ function ShopPage({go,catFilter,setCatFilter,query,setQuery,prods=PRODS}){
   </div>);
 }
 
-function DetailPage({prod,go,buy}){
-  if(!prod)return null;const cat=catOf(prod.cat);const related=PRODS.filter(p=>p.cat===prod.cat&&p.id!==prod.id).slice(0,3);
+function DetailPage({prod,go,buy,prods=[]}){
+  if(!prod)return null;const cat=catOf(prod.cat||prod.category);const related=prods.filter(p=>(p.cat||p.category)===(prod.cat||prod.category)&&(p.id||p._id)!==(prod.id||prod._id)).slice(0,3);
   return(<div style={{maxWidth:1100,margin:"0 auto",padding:"30px 20px"}}>
     <button onClick={()=>go("shop")} style={{background:"none",border:"none",color:"#2563EB",cursor:"pointer",fontSize:14,fontWeight:600,marginBottom:20,fontFamily:"inherit"}}>← Quay lại kho bản vẽ</button>
     <div style={{display:"flex",gap:28,flexWrap:"wrap"}}>
       <div style={{flex:"1 1 400px"}}>
-        <div style={{borderRadius:16,overflow:"hidden",boxShadow:"0 4px 24px rgba(15,23,42,.12)"}}>
-          <img src={getBP(prod.cat)} alt={prod.title} style={{width:"100%",display:"block"}}/>
-        </div>
+        {/* Gallery ảnh thật */}
+        {(()=>{
+          const imgs=(prod.images&&prod.images.length>0)?prod.images:[getBP(prod.cat||prod.category)];
+          const[sel,setSel]=React.useState(0);
+          return(<>
+            <div style={{borderRadius:16,overflow:"hidden",boxShadow:"0 4px 24px rgba(15,23,42,.12)",marginBottom:10}}>
+              <img src={imgs[Math.min(sel,imgs.length-1)]} alt={prod.title} style={{width:"100%",height:320,objectFit:"cover",display:"block"}}/>
+            </div>
+            {imgs.length>1&&(
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {imgs.map((img,i)=>(
+                  <div key={i} onClick={()=>setSel(i)} style={{width:72,height:54,borderRadius:8,overflow:"hidden",cursor:"pointer",border:sel===i?"2.5px solid #2563EB":"2px solid #E2E8F0",flexShrink:0}}>
+                    <img src={img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>);
+        })()}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14}}>
           {[["📁 Số file",`${prod.fc} files`],["📥 Lượt tải",prod.dl.toLocaleString()],["⭐ Đánh giá",`${prod.rate}/5 (${prod.rev} đánh giá)`],["💾 Định dạng",prod.ft]].map(([k,v])=>(
             <div key={k} style={{background:"#fff",borderRadius:10,padding:"12px 14px",boxShadow:"0 1px 4px rgba(15,23,42,.06)"}}>
@@ -253,7 +255,7 @@ function DetailPage({prod,go,buy}){
           {prod.tags?.map(t=><span key={t} style={{background:"#EFF6FF",color:"#2563EB",borderRadius:20,padding:"4px 12px",fontSize:11.5,fontWeight:600}}>#{t}</span>)}
         </div>
         <div style={{background:"#fff",borderRadius:16,padding:"22px 20px",boxShadow:"0 4px 20px rgba(15,23,42,.1)",border:"1px solid #E2E8F0"}}>
-          {prod.free?(
+          {(prod.free||prod.isFree)?(
             <><div style={{fontSize:28,fontWeight:800,color:"#059669",marginBottom:16}}>Miễn phí</div>
             <button className="kbv-btn" onClick={async(e)=>{
                 const btn=e.currentTarget;btn.disabled=true;btn.textContent="⏳ Đang tạo link…";
@@ -436,7 +438,7 @@ function SuccessPage({order,go}){
 
 /* ── useProducts: load từ API, fallback về PRODS hardcode ── */
 function useProducts() {
-  const [prods, setProds] = useState(PRODS);
+  const [prods, setProds] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     fetch("/api/products")
