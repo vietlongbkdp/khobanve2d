@@ -1,23 +1,11 @@
 const crypto = require("crypto");
-const { MongoClient, ObjectId } = require("mongodb");
-
-// Tạo client mới mỗi request — an toàn với Vercel serverless
-async function getCol() {
-  const client = new MongoClient(process.env.MONGODB_URL, {
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 10000,
-  });
-  await client.connect();
-  return { client, col: client.db("khobanve2d").collection("products") };
-}
 
 function verifyAdmin(req) {
   const token = (req.headers["authorization"] || "").replace("Bearer ", "");
   if (!token) return false;
   try {
     const [ts, sig] = token.split(".");
-    if (!ts || !sig) return false;
-    if (Date.now() - parseInt(ts) > 86400000) return false;
+    if (!ts || !sig || Date.now() - parseInt(ts) > 86400000) return false;
     const expected = crypto.createHmac("sha256", process.env.ADMIN_SECRET || "admin-secret")
       .update(`admin:${ts}`).digest("hex");
     return sig === expected;
@@ -30,11 +18,29 @@ module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  if (!process.env.MONGODB_URL) return res.status(500).json({ error: "MONGODB_URL not configured" });
+  if (!process.env.MONGODB_URL) {
+    return res.status(500).json({ error: "MONGODB_URL not configured" });
+  }
 
-  const { client, col } = await getCol().catch(e => { throw e; });
+  // Import mongodb bên trong handler — tránh crash module-level
+  let MongoClient, ObjectId;
+  try {
+    const mongo = require("mongodb");
+    MongoClient = mongo.MongoClient;
+    ObjectId    = mongo.ObjectId;
+  } catch (e) {
+    return res.status(500).json({ error: "mongodb package not found: " + e.message });
+  }
+
+  const client = new MongoClient(process.env.MONGODB_URL, {
+    serverSelectionTimeoutMS: 8000,
+    connectTimeoutMS: 8000,
+  });
 
   try {
+    await client.connect();
+    const col = client.db("khobanve2d").collection("products");
+
     // ── GET ──
     if (req.method === "GET") {
       const { id, admin } = req.query;
@@ -69,7 +75,7 @@ module.exports = async function handler(req, res) {
         rating: Number(body.rating) || 5,
         reviewCount: Number(body.reviewCount) || 0,
         downloadCount: 0, viewCount: 0,
-        tags: body.tags || [],
+        tags: Array.isArray(body.tags) ? body.tags : [],
         createdAt: new Date(), updatedAt: new Date(),
       };
       const result = await col.insertOne(doc);
@@ -82,7 +88,7 @@ module.exports = async function handler(req, res) {
       if (!id) return res.status(400).json({ error: "Missing id" });
       const upd = { ...req.body, updatedAt: new Date() };
       delete upd._id;
-      if (upd.price !== undefined)         upd.price = Number(upd.price);
+      if (upd.price !== undefined) upd.price = Number(upd.price);
       if (upd.originalPrice !== undefined) upd.originalPrice = upd.originalPrice ? Number(upd.originalPrice) : null;
       const r = await col.updateOne({ _id: new ObjectId(id) }, { $set: upd });
       return r.matchedCount ? res.status(200).json({ success: true }) : res.status(404).json({ error: "Not found" });
@@ -99,9 +105,9 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
 
   } catch (e) {
-    console.error("[products]", e.message);
+    console.error("[products error]", e.message);
     return res.status(500).json({ error: e.message });
   } finally {
-    await client.close(); // Luôn đóng connection sau mỗi request
+    try { await client.close(); } catch {}
   }
 };
