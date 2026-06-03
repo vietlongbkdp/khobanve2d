@@ -622,7 +622,24 @@ function ProductModal({ prod, onClose, onSave, token }) {
             {inp("price","Giá (đ)","number","VD: 50000")}
             {inp("originalPrice","Giá gốc (đ, tùy chọn)","number","VD: 80000")}
           </div>
-          {inp("driveFileId","Google Drive File ID","text","1aBcDeFg... (lấy từ link Drive)")}
+          <div style={{marginBottom:14}}>
+            <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5}}>Google Drive Link hoặc File ID</label>
+            <input
+              type="text"
+              value={form.driveFileId||""}
+              onChange={e=>{
+                const val = e.target.value.trim();
+                // Tự động extract File ID từ nhiều dạng link Drive
+                const match = val.match(/\/d\/([a-zA-Z0-9_-]{20,})/)||val.match(/id=([a-zA-Z0-9_-]{20,})/)||val.match(/^([a-zA-Z0-9_-]{20,})$/);
+                set("driveFileId", match ? match[1] : val);
+              }}
+              placeholder="Paste link Drive hoặc File ID đều được"
+              style={{width:"100%",height:38,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}
+            />
+            {form.driveFileId && !form.driveFileId.includes("/") && (
+              <div style={{fontSize:11,color:"#059669",marginTop:4}}>✅ File ID: <b>{form.driveFileId}</b></div>
+            )}
+          </div>
           <div style={{display:"flex",gap:20,marginBottom:16,flexWrap:"wrap"}}>
             {[["isFree","Miễn phí"],["isActive","Hiển thị"],["isHot","🔥 Hot"],["isNew","Mới"]].map(([k,l])=>(
               <label key={k} style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13,fontWeight:600,color:"#374151"}}>
