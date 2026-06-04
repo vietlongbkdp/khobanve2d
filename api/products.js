@@ -74,7 +74,8 @@ module.exports = async function handler(req, res) {
         isHot: !!body.isHot, isNew: !!body.isNew,
         rating: Number(body.rating) || 5,
         reviewCount: Number(body.reviewCount) || 0,
-        downloadCount: 0, viewCount: 0,
+        fileCount: Number(body.fileCount) || 1,
+        downloadCount: Math.floor(Math.random() * 100), viewCount: 0,
         tags: Array.isArray(body.tags) ? body.tags : [],
         createdAt: new Date(), updatedAt: new Date(),
       };
@@ -89,6 +90,7 @@ module.exports = async function handler(req, res) {
       const upd = { ...req.body, updatedAt: new Date() };
       delete upd._id;
       if (upd.price !== undefined) upd.price = Number(upd.price);
+      if (upd.fileCount !== undefined) upd.fileCount = Number(upd.fileCount);
       if (upd.originalPrice !== undefined) upd.originalPrice = upd.originalPrice ? Number(upd.originalPrice) : null;
       const r = await col.updateOne({ _id: new ObjectId(id) }, { $set: upd });
       return r.matchedCount ? res.status(200).json({ success: true }) : res.status(404).json({ error: "Not found" });
