@@ -50,11 +50,16 @@ module.exports = async function handler(req, res) {
       }
       const isAdmin = admin && verifyAdmin(req);
       const filter  = isAdmin ? {} : { isActive: true };
-      const prods   = await col.find(filter).sort({ createdAt: -1 }).toArray();
 
-      // Ẩn field nhạy cảm với user thường
-      const result = isAdmin ? prods : prods.map(({ driveFileId, updatedAt, viewCount, ...safe }) => safe);
-      return res.status(200).json(result);
+      // Public: chỉ lấy đúng fields cần thiết, ẩn hoàn toàn driveFileId + nội bộ
+      const projection = isAdmin ? {} : {
+        _id: 1, code: 1, title: 1, category: 1, subcategory: 1,
+        images: 1, description: 1, fileType: 1, fileSize: 1, fileCount: 1,
+        price: 1, originalPrice: 1, isFree: 1, isHot: 1, isNew: 1,
+        rating: 1, reviewCount: 1, downloadCount: 1, tags: 1
+      };
+      const prods = await col.find(filter, { projection }).sort({ createdAt: -1 }).toArray();
+      return res.status(200).json(prods);
     }
 
     if (!verifyAdmin(req)) return res.status(401).json({ error: "Unauthorized" });
