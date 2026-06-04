@@ -541,7 +541,7 @@ function DetailPage({prod,go,buy,prods=[]}){
                   const r=await fetch(`/api/get-download-link?orderId=FREE&productId=${prod.id}&amount=0`);
                   const d=await r.json();
                   const url=d.token?`/api/download?token=${d.token}`:d.url;
-                  if(url){window.open(url,"_blank");btn.textContent="✅ Đã mở link tải!";}
+                  if(url){window.location.href=url;btn.textContent="✅ Đang tải file...";}
                   else{btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
                 }catch(e){btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
               }} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>📥 Tải File Ngay (Miễn Phí)</button></>
