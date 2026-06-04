@@ -287,7 +287,7 @@ function ShopPage({go,catFilter,setCatFilter,query,setQuery,prods=PRODS}){
       <aside style={{width:220,flexShrink:0}}>
         <div style={{background:"#fff",borderRadius:14,padding:20,boxShadow:"0 2px 8px rgba(15,23,42,.07)",marginBottom:16}}>
           <div style={{fontWeight:700,fontSize:13.5,color:"#0F172A",marginBottom:14,textTransform:"uppercase",letterSpacing:.5}}>📂 Danh mục</div>
-          {[{id:"all",label:"Tất cả",emoji:"◉",count:PRODS.length},...CATS.map(c=>({...c,count:PRODS.filter(p=>p.cat===c.id).length}))].map(c=>(
+          {[{id:"all",label:"Tất cả",emoji:"◉",count:prods.length},...CATS.map(c=>({...c,count:prods.filter(p=>(p.cat||p.category)===c.id).length}))].map(c=>(
             <div key={c.id} onClick={()=>setCatFilter(c.id)} style={{padding:"9px 12px",borderRadius:8,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:2,background:catFilter===c.id?"#EFF6FF":"transparent",color:catFilter===c.id?"#1D4ED8":"#374151",fontWeight:catFilter===c.id?700:500,fontSize:13,transition:"all .15s"}}>
               <span>{c.emoji||"▸"} {c.label}</span>
               <span style={{fontSize:11,background:catFilter===c.id?"#DBEAFE":"#F1F5F9",color:catFilter===c.id?"#1D4ED8":"#94A3B8",borderRadius:10,padding:"1px 7px",fontWeight:600}}>{c.count}</span>
