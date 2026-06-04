@@ -762,7 +762,9 @@ function SuccessPage({order,go}){
         <div style={{fontSize:72,marginBottom:16}}>🎉</div>
         <div style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:26,fontWeight:800,color:"#059669",marginBottom:8}}>Thanh Toán Thành Công!</div>
         <div style={{fontSize:15,color:"#64748B",marginBottom:24,lineHeight:1.7}}>
-          {downloaded?"File đã được tải xuống thành công.":<span>Cảm ơn bạn đã mua bản vẽ.<br/>Đang tạo link tải bảo mật.</span>}
+          {downloaded
+            ?"File đã được tải xuống thành công."
+            :<span>Cảm ơn bạn đã mua bản vẽ.<br/>Đang tạo link tải bảo mật.</span>}
         </div>
         <div style={{background:"#F0FDF4",borderRadius:14,padding:"18px 22px",marginBottom:24,border:"1px solid #BBF7D0"}}>
           <div style={{fontSize:13,color:"#64748B",marginBottom:8}}>📦 Đơn hàng của bạn</div>
@@ -782,7 +784,7 @@ function SuccessPage({order,go}){
               </div>
             </div>
             :downloaded
-              ?<div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:"15px",textAlign:"center",fontSize:15,fontWeight:700,color:"#059669",marginBottom:10}}>✅ Đã tải xuống thành công!</div>
+              ?<div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,color:"#059669",marginBottom:10}}>✅ Đã tải xuống thành công!</div>
               :dlUrl
                 ?<button onClick={()=>doDownload(dlUrl)} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>📥 Tải File Ngay</button>
                 :null
@@ -794,7 +796,6 @@ function SuccessPage({order,go}){
   );
 }
 
-
 function useProducts() {
   const [prods, setProds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -803,39 +804,567 @@ function useProducts() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data && Array.isArray(data) && data.length > 0) {
+          // Normalize MongoDB docs sang format cũ
           const normalized = data.map(p => ({
-            id:        p._id,
-            cat:       p.category,
-            title:     p.title,
-            price:     p.price,
-            oldPrice:  p.originalPrice || null,
-            desc:      p.description,
-            images:    p.images || [],
-            ft:        p.fileType,
-            fc:        p.fileCount || 0,
+            id:       p._id,
+            cat:      p.category,
+            title:    p.title,
+            price:    p.price,
+            oldPrice: p.originalPrice || null,
+            desc:     p.description,
+            images:   p.images || [],
+            ft:       p.fileType,
+            fc:       p.fileCount || 0,
             fileCount: p.fileCount || 0,
-            fileSize:  p.fileSize,
-            dl:        p.downloadCount || 0,
-            rate:      p.rating || 5,
-            rev:       p.reviewCount || 0,
-            free:      !!p.isFree,
-            isFree:    !!p.isFree,
-            hot:       p.isHot || false,
-            isHot:     p.isHot || false,
-            isNew:     p.isNew || false,
-            tags:      p.tags || [],
-            code:      p.code,
+            dl:       p.downloadCount || 0,
+            rate:     p.rating || 5,
+            rev:      p.reviewCount || 0,
+            fileId:   p.driveFileId || "",
+            free:     !!p.isFree,
+            hot:      p.isHot || false,
+            isNew:    p.isNew || false,
+            tags:     p.tags || [],
+            code:     p.code,
+            fileSize: p.fileSize,
             subcategory: p.subcategory,
           }));
           setProds(normalized);
         }
       })
-      .catch(() => {})
+      .catch(() => {}) // fallback về PRODS hardcode
       .finally(() => setLoading(false));
   }, []);
-  return { prods, loading };
+  return { prods, loading, reload: () => {
+    setLoading(true);
+    fetch("/api/products").then(r=>r.json()).then(data=>{
+      if(data&&Array.isArray(data)&&data.length>0){
+        setProds(data.map(p=>({id:p._id,cat:p.category,title:p.title,price:p.price,oldPrice:p.originalPrice||null,desc:p.description,images:p.images||[],ft:p.fileType,fc:0,dl:p.downloadCount||0,rate:p.rating||5,rev:p.reviewCount||0,fileId:p.driveFileId||"",free:!!p.isFree,hot:p.isHot||false,isNew:p.isNew||false,tags:p.tags||[],code:p.code,fileSize:p.fileSize,subcategory:p.subcategory})));
+      }
+    }).finally(()=>setLoading(false));
+  }};
 }
 
+/* ════════════════════════════════════════
+   ADMIN COMPONENTS
+════════════════════════════════════════ */
+
+/* ── Admin Login ── */
+function AdminLoginPage({ onLogin }) {
+  const [pw, setPw]   = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    setLoading(true); setErr("");
+    try {
+      const r = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw })
+      });
+      const d = await r.json();
+      if (r.ok) { sessionStorage.setItem("adminToken", d.token); onLogin(d.token); }
+      else setErr(d.error || "Sai mật khẩu");
+    } catch { setErr("Lỗi kết nối"); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0F172A,#1E3A8A)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{background:"#fff",borderRadius:20,padding:"48px 40px",maxWidth:400,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,.3)"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:48,marginBottom:8}}>🔐</div>
+          <h1 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:24,fontWeight:800,color:"#0F172A"}}>Admin KhoBanVe2D</h1>
+          <p style={{fontSize:13,color:"#64748B",marginTop:6}}>Đăng nhập để quản lý bản vẽ</p>
+        </div>
+        <input value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}
+          type="password" placeholder="Mật khẩu admin"
+          style={{width:"100%",height:48,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"0 16px",fontSize:15,marginBottom:12,outline:"none",fontFamily:"inherit"}}/>
+        {err && <p style={{color:"#EF4444",fontSize:13,marginBottom:12,textAlign:"center"}}>{err}</p>}
+        <button onClick={submit} disabled={loading} style={{width:"100%",height:48,background:"linear-gradient(135deg,#1D4ED8,#2563EB)",color:"#fff",border:"none",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+          {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
+        </button>
+        <div style={{textAlign:"center",marginTop:16}}>
+          <a href="/" style={{fontSize:13,color:"#64748B",textDecoration:"none"}}>← Về trang chủ</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Product Form Modal (Add/Edit) ── */
+function ProductModal({ prod, onClose, onSave, token }) {
+  const isEdit = !!prod?._id;
+  const [form, setForm] = useState(prod || {
+    title:"", code:"", category:"kien-truc", subcategory:"",
+    description:"", fileType:"DWG AutoCAD", fileSize:"",
+    price:0, originalPrice:"", driveFileId:"",
+    isFree:false, isActive:true, isHot:false, isNew:false,
+    rating:5, downloadCount:0, images:[]
+  });
+  const [saving, setSaving]     = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imgUrl, setImgUrl]     = useState("");
+
+  const set = (k, v) => setForm(f => ({...f, [k]: v}));
+
+  const uploadImg = async (file) => {
+    const cloudName   = "vietlongbk123";
+    const uploadPreset = "khobanve2d_unsigned";
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("upload_preset", uploadPreset);
+      const r = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method:"POST", body:fd });
+      const d = await r.json();
+      if (d.secure_url) set("images", [...(form.images||[]), d.secure_url]);
+      else alert("Upload thất bại: " + (d.error?.message || "Unknown"));
+    } catch { alert("Lỗi upload ảnh"); }
+    finally { setUploading(false); }
+  };
+
+  const addImgUrl = () => {
+    if (imgUrl.trim()) { set("images", [...(form.images||[]), imgUrl.trim()]); setImgUrl(""); }
+  };
+
+  const save = async () => {
+    if (!form.title) return alert("Vui lòng nhập tên bản vẽ");
+    setSaving(true);
+    try {
+      const url    = isEdit ? `/api/products?id=${prod._id}` : "/api/products";
+      const method = isEdit ? "PUT" : "POST";
+      const body   = {...form, price: Number(form.price), originalPrice: form.originalPrice ? Number(form.originalPrice) : null };
+      const r      = await fetch(url, { method, headers: {"Content-Type":"application/json","Authorization":`Bearer ${token}`}, body:JSON.stringify(body) });
+      const d      = await r.json();
+      if (r.ok) onSave();
+      else alert("Lỗi: " + (d.error || "Unknown"));
+    } catch { alert("Lỗi kết nối"); }
+    finally { setSaving(false); }
+  };
+
+  const inp  = (k, label, type="text", ph="") => (
+    <div style={{marginBottom:14}}>
+      <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5}}>{label}</label>
+      <input type={type} value={form[k]||""} onChange={e=>set(k,e.target.value)} placeholder={ph}
+        style={{width:"100%",height:38,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+    </div>
+  );
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:640,maxHeight:"90vh",overflow:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.3)"}}>
+        <div style={{padding:"20px 24px",borderBottom:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:"#fff",zIndex:1}}>
+          <h2 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:18,fontWeight:800,color:"#0F172A"}}>{isEdit?"✏️ Sửa Bản Vẽ":"➕ Thêm Bản Vẽ Mới"}</h2>
+          <button onClick={onClose} style={{background:"#F1F5F9",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:13}}>✕ Đóng</button>
+        </div>
+        <div style={{padding:"20px 24px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div>{inp("title","Tên bản vẽ *","text","VD: Nhà Phố 2 Tầng 5x15m")}</div>
+            <div>{inp("code","Mã bản vẽ","text","Để trống = tự động")}</div>
+          </div>
+          <div style={{marginBottom:14}}>
+            <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5}}>Danh mục</label>
+            <select value={form.category||"kien-truc"} onChange={e=>set("category",e.target.value)}
+              style={{width:"100%",height:38,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 12px",fontSize:13,fontFamily:"inherit",background:"#fff",outline:"none"}}>
+              {CATS.map(c=><option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+            </select>
+          </div>
+          {inp("subcategory","Thể loại con","text","VD: Bản vẽ Biệt thự")}
+          <div style={{marginBottom:14}}>
+            <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5}}>Mô tả</label>
+            <textarea value={form.description||""} onChange={e=>set("description",e.target.value)} rows={3} placeholder="Mô tả chi tiết về bản vẽ..."
+              style={{width:"100%",border:"1.5px solid #E2E8F0",borderRadius:8,padding:"10px 12px",fontSize:13,fontFamily:"inherit",resize:"vertical",outline:"none"}}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+            {inp("fileType","Loại file","text","DWG, PDF, SKP...")}
+            {inp("fileSize","Dung lượng","text","VD: 114 MB")}
+            {inp("fileCount","Số file trong bộ","number","VD: 12")}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            {inp("price","Giá (đ)","number","VD: 50000")}
+            {inp("originalPrice","Giá gốc (đ, tùy chọn)","number","VD: 80000")}
+          </div>
+          <div style={{marginBottom:14}}>
+            <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5}}>Google Drive Link hoặc File ID</label>
+            <input
+              type="text"
+              value={form.driveFileId||""}
+              onChange={e=>{
+                const val = e.target.value.trim();
+                // Tự động extract File ID từ nhiều dạng link Drive
+                const match = val.match(/\/d\/([a-zA-Z0-9_-]{20,})/)||val.match(/id=([a-zA-Z0-9_-]{20,})/)||val.match(/^([a-zA-Z0-9_-]{20,})$/);
+                set("driveFileId", match ? match[1] : val);
+              }}
+              placeholder="Paste link Drive hoặc File ID đều được"
+              style={{width:"100%",height:38,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}
+            />
+            {form.driveFileId && !form.driveFileId.includes("/") && (
+              <div style={{fontSize:11,color:"#059669",marginTop:4}}>✅ File ID: <b>{form.driveFileId}</b></div>
+            )}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+            <div>
+              <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5}}>📥 Lượt tải (hiển thị)</label>
+              <input type="number" min="0" value={form.downloadCount||0} onChange={e=>set("downloadCount",parseInt(e.target.value)||0)}
+                style={{width:"100%",height:38,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+            </div>
+            <div>
+              <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5}}>⭐ Đánh giá (1–5)</label>
+              <input type="number" min="1" max="5" step="0.1" value={form.rating||5} onChange={e=>set("rating",parseFloat(e.target.value)||5)}
+                style={{width:"100%",height:38,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:20,marginBottom:16,flexWrap:"wrap"}}>
+            {[["isFree","Miễn phí"],["isActive","Hiển thị"],["isHot","🔥 Hot"],["isNew","Mới"]].map(([k,l])=>(
+              <label key={k} style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13,fontWeight:600,color:"#374151"}}>
+                <input type="checkbox" checked={!!form[k]} onChange={e=>set(k,e.target.checked)} style={{width:16,height:16}}/>
+                {l}
+              </label>
+            ))}
+          </div>
+
+          {/* ── Ảnh ── */}
+          <div style={{marginBottom:14}}>
+            <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:8}}>Ảnh demo ({(form.images||[]).length} ảnh)</label>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+              {(form.images||[]).map((url,i)=>(
+                <div key={i} style={{position:"relative",width:80,height:60,borderRadius:8,overflow:"hidden",border:"1.5px solid #E2E8F0"}}>
+                  <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  <button onClick={()=>set("images",(form.images||[]).filter((_,j)=>j!==i))}
+                    style={{position:"absolute",top:2,right:2,background:"rgba(239,68,68,.9)",color:"#fff",border:"none",borderRadius:4,width:18,height:18,fontSize:11,cursor:"pointer",lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                </div>
+              ))}
+            </div>
+            {/* Upload từ máy */}
+            <label style={{display:"inline-block",padding:"8px 16px",background:"#EFF6FF",color:"#2563EB",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600,marginBottom:8}}>
+              {uploading ? "⏳ Đang upload..." : "📁 Upload ảnh (Cloudinary)"}
+              <input type="file" accept="image/*" multiple style={{display:"none"}} disabled={uploading}
+                onChange={e=>{for(const f of e.target.files) uploadImg(f); e.target.value="";}}/>
+            </label>
+            {/* Hoặc nhập URL */}
+            <div style={{display:"flex",gap:8,marginTop:8}}>
+              <input value={imgUrl} onChange={e=>setImgUrl(e.target.value)} placeholder="Hoặc paste URL ảnh vào đây..."
+                style={{flex:1,height:36,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+              <button onClick={addImgUrl} style={{padding:"0 14px",background:"#059669",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600,fontFamily:"inherit"}}>+ Thêm</button>
+            </div>
+          </div>
+
+          <button onClick={save} disabled={saving} style={{width:"100%",height:46,background:"linear-gradient(135deg,#1D4ED8,#2563EB)",color:"#fff",border:"none",borderRadius:10,fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",fontFamily:"inherit"}}>
+            {saving ? "⏳ Đang lưu..." : (isEdit ? "💾 Lưu Thay Đổi" : "➕ Thêm Bản Vẽ")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Admin Dashboard ── */
+function AdminDashboard({ token, onLogout }) {
+  const [tab, setTab]       = useState("products"); // products | revenue
+  const [prods, setProds]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal]   = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [search, setSearch] = useState("");
+  const [catF, setCatF]     = useState("all");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch("/api/products?admin=1", { headers: { Authorization: `Bearer ${token}` } });
+      setProds(Array.isArray(await r.json()) ? await fetch("/api/products?admin=1",{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.json()) : []);
+    } catch {}
+    finally { setLoading(false); }
+  };
+
+  // Load một lần đúng
+  useEffect(() => {
+    (async()=>{
+      setLoading(true);
+      try{
+        const r=await fetch("/api/products?admin=1",{headers:{Authorization:`Bearer ${token}`}});
+        const d=await r.json();
+        if(Array.isArray(d)) setProds(d);
+      }catch{}
+      finally{setLoading(false);}
+    })();
+  }, []);
+
+  const reload = async (silent=false) => {
+    if(!silent) setLoading(true);
+    try{
+      const r=await fetch("/api/products?admin=1",{headers:{Authorization:`Bearer ${token}`}});
+      const d=await r.json();
+      if(Array.isArray(d)) setProds(d);
+    }catch{}
+    finally{if(!silent) setLoading(false);}
+  };
+
+  // Auto-refresh mỗi 30 giây (silent)
+  useEffect(()=>{
+    const iv=setInterval(()=>reload(true),30000);
+    return()=>clearInterval(iv);
+  },[]);
+
+  const del = async (id, title) => {
+    if (!confirm(`Xóa "${title}"?`)) return;
+    setDeleting(id);
+    try {
+      const r = await fetch(`/api/products?id=${id}`, { method:"DELETE", headers:{Authorization:`Bearer ${token}`} });
+      if (r.ok) reload();
+    } finally { setDeleting(null); }
+  };
+
+  const filtered = prods.filter(p => {
+    const mc = catF === "all" || p.category === catF;
+    const mq = !search || p.title?.toLowerCase().includes(search.toLowerCase()) || p.code?.toLowerCase().includes(search.toLowerCase());
+    return mc && mq;
+  });
+
+  // Tính doanh thu
+  const totalDownloads = prods.reduce((s,p)=>s+(p.downloadCount||0),0);
+  const paidProds      = prods.filter(p=>!p.isFree&&p.price>0);
+  const totalRevenue   = paidProds.reduce((s,p)=>s+(p.downloadCount||0)*p.price,0);
+  const topProds       = [...prods].sort((a,b)=>(b.downloadCount||0)-(a.downloadCount||0));
+
+  const TAB_BTN = (id, label, icon) => (
+    <button onClick={()=>setTab(id)} style={{
+      padding:"9px 20px",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"inherit",
+      fontSize:13.5,fontWeight:600,transition:"all .15s",
+      background:tab===id?"#fff":"transparent",
+      color:tab===id?"#1D4ED8":"#64748B",
+      boxShadow:tab===id?"0 1px 4px rgba(15,23,42,.1)":"none"
+    }}>{icon} {label}</button>
+  );
+
+  return (
+    <div style={{minHeight:"100vh",background:"#F1F5F9"}}>
+      {/* Header */}
+      <header style={{background:"#0F172A",padding:"0 24px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:32,height:32,background:"linear-gradient(135deg,#2563EB,#3B82F6)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>📐</div>
+          <span style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:16,fontWeight:800,color:"#fff"}}>
+            KhoBanVe2D <span style={{color:"#60A5FA",fontSize:12,fontWeight:400}}>Admin Panel</span>
+          </span>
+        </div>
+        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          <a href="/" target="_blank" style={{color:"#94A3B8",fontSize:13,textDecoration:"none"}}>🌐 Xem website</a>
+          <button onClick={onLogout} style={{background:"#EF4444",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:13,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>Đăng xuất</button>
+        </div>
+      </header>
+
+      <div style={{maxWidth:1200,margin:"0 auto",padding:24}}>
+        {/* Stats tổng quan */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:20}}>
+          {[
+            ["📦",prods.length,"Tổng bản vẽ","#EFF6FF","#2563EB"],
+            ["📥",totalDownloads.toLocaleString("vi-VN"),"Tổng lượt tải","#F0FDF4","#059669"],
+            ["💰",totalRevenue.toLocaleString("vi-VN")+"đ","Ước tính doanh thu","#FFF7ED","#EA580C"],
+            ["🆓",prods.filter(p=>p.isFree).length,"Sản phẩm miễn phí","#F5F3FF","#7C3AED"],
+          ].map(([ic,v,l,bg,color])=>(
+            <div key={l} style={{background:"#fff",borderRadius:12,padding:"16px 18px",boxShadow:"0 1px 4px rgba(15,23,42,.07)",borderLeft:`4px solid ${color}`}}>
+              <div style={{fontSize:22,marginBottom:4}}>{ic}</div>
+              <div style={{fontSize:20,fontWeight:800,color:"#0F172A",fontFamily:"'Be Vietnam Pro',sans-serif"}}>{v}</div>
+              <div style={{fontSize:11.5,color:"#64748B",marginTop:2}}>{l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div style={{background:"#F1F5F9",borderRadius:10,padding:4,display:"inline-flex",gap:2,marginBottom:20}}>
+          {TAB_BTN("products","Sản Phẩm","📦")}
+          {TAB_BTN("revenue","Doanh Thu & Lượt Tải","📊")}
+        </div>
+
+        {/* ── TAB: SẢN PHẨM ── */}
+        {tab==="products"&&(<>
+          <div style={{background:"#fff",borderRadius:14,padding:"14px 18px",marginBottom:14,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",boxShadow:"0 1px 4px rgba(15,23,42,.07)"}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm tên, mã..."
+              style={{flex:1,minWidth:200,height:38,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 14px",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+            <select value={catF} onChange={e=>setCatF(e.target.value)}
+              style={{height:38,border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 12px",fontSize:13,fontFamily:"inherit",background:"#fff",outline:"none"}}>
+              <option value="all">Tất cả danh mục</option>
+              {CATS.map(c=><option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+            </select>
+            <button onClick={()=>reload()} style={{background:"#F1F5F9",color:"#475569",border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 14px",height:38,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}>
+              🔄 Làm mới
+            </button>
+            <button onClick={()=>setModal("add")} style={{background:"linear-gradient(135deg,#1D4ED8,#2563EB)",color:"#fff",border:"none",borderRadius:8,padding:"0 20px",height:38,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+              ➕ Thêm bản vẽ
+            </button>
+          </div>
+
+          <div style={{background:"#fff",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(15,23,42,.07)"}}>
+            {loading
+              ? <div style={{textAlign:"center",padding:"48px",color:"#64748B"}}>⏳ Đang tải...</div>
+              : filtered.length===0
+                ? <div style={{textAlign:"center",padding:"48px",color:"#94A3B8"}}>Chưa có bản vẽ nào</div>
+                : <table style={{width:"100%",borderCollapse:"collapse"}}>
+                    <thead>
+                      <tr style={{background:"#F8FAFC",borderBottom:"1px solid #E2E8F0"}}>
+                        {["#","Mã","Tên Bản Vẽ","Danh Mục","Giá","📥 Lượt Tải","Files","Trạng thái","Thao tác"].map(h=>(
+                          <th key={h} style={{textAlign:"left",padding:"10px 14px",fontSize:11,fontWeight:700,color:"#64748B",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((p,i)=>{
+                        const cat=catOf(p.category);
+                        return(
+                          <tr key={p._id} style={{borderBottom:"1px solid #F1F5F9",background:i%2===0?"#fff":"#FAFBFC"}}>
+                            <td style={{padding:"10px 14px",fontSize:13,fontWeight:700,color:"#94A3B8",textAlign:"center",width:40}}>{i+1}</td>
+                            <td style={{padding:"10px 14px",fontSize:12,color:"#64748B",fontFamily:"monospace"}}>{p.code||"—"}</td>
+                            <td style={{padding:"10px 14px",maxWidth:240}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                {p.images?.[0]&&<img src={p.images[0]} alt="" style={{width:38,height:30,objectFit:"cover",borderRadius:4,flexShrink:0}}/>}
+                                <div>
+                                  <div style={{fontSize:13,fontWeight:600,color:"#0F172A",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.title}</div>
+                                  {p.subcategory&&<div style={{fontSize:11,color:"#94A3B8"}}>{p.subcategory}</div>}
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{padding:"10px 14px"}}><span style={{background:cat?.bg,color:cat?.color,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{cat?.emoji} {cat?.label}</span></td>
+                            <td style={{padding:"10px 14px",whiteSpace:"nowrap"}}>
+                              {p.isFree?<span style={{color:"#059669",fontWeight:700,fontSize:13}}>Miễn phí</span>
+                                :<span style={{color:"#1D4ED8",fontWeight:700,fontSize:13}}>{(p.price||0).toLocaleString("vi-VN")}đ</span>}
+                            </td>
+                            <td style={{padding:"10px 14px",textAlign:"center"}}>
+                              <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#F0F9FF",color:"#0284C7",borderRadius:8,padding:"3px 10px",fontSize:12,fontWeight:700}}>
+                                📥 {(p.downloadCount||0).toLocaleString("vi-VN")}
+                              </span>
+                            </td>
+                            <td style={{padding:"10px 14px",textAlign:"center",fontSize:12,color:"#64748B",fontWeight:600}}>{p.fileCount||0} files</td>
+                            <td style={{padding:"10px 14px"}}>
+                              <span style={{background:p.isActive?"#D1FAE5":"#FEE2E2",color:p.isActive?"#059669":"#DC2626",padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>
+                                {p.isActive?"● Hiển thị":"○ Ẩn"}
+                              </span>
+                            </td>
+                            <td style={{padding:"10px 14px"}}>
+                              <div style={{display:"flex",gap:6}}>
+                                <button onClick={()=>setModal(p)} style={{background:"#EFF6FF",color:"#2563EB",border:"none",borderRadius:6,padding:"5px 10px",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>✏️ Sửa</button>
+                                <button onClick={()=>del(p._id,p.title)} disabled={deleting===p._id}
+                                  style={{background:"#FEF2F2",color:"#EF4444",border:"none",borderRadius:6,padding:"5px 10px",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
+                                  {deleting===p._id?"...":"🗑️ Xóa"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+            }
+          </div>
+          <p style={{fontSize:12,color:"#94A3B8",marginTop:10,textAlign:"center"}}>{filtered.length} bản vẽ • tổng {prods.length}</p>
+        </>)}
+
+        {/* ── TAB: DOANH THU ── */}
+        {tab==="revenue"&&(
+          <div>
+            {/* Top cards */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:14,marginBottom:20}}>
+              {[
+                ["💰","Ước tính doanh thu",totalRevenue.toLocaleString("vi-VN")+"đ","(lượt tải × giá niêm yết)","#FFF7ED","#EA580C"],
+                ["📥","Tổng lượt tải",totalDownloads.toLocaleString("vi-VN"),"tất cả sản phẩm","#F0F9FF","#0284C7"],
+                ["🏆","Tải nhiều nhất",topProds[0]?.title?.slice(0,30)+"..."||"—",`${topProds[0]?.downloadCount||0} lượt`,"#F0FDF4","#059669"],
+                ["📦","Sản phẩm có phí",paidProds.length+" sản phẩm",`TB ${paidProds.length?Math.round(totalRevenue/paidProds.reduce((s,p)=>s+(p.downloadCount||0),1)).toLocaleString("vi-VN"):"0"}đ/lượt`,"#EFF6FF","#2563EB"],
+              ].map(([ic,l,v,sub,bg,color])=>(
+                <div key={l} style={{background:"#fff",borderRadius:14,padding:"18px 20px",boxShadow:"0 1px 4px rgba(15,23,42,.07)",borderTop:`3px solid ${color}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div>
+                      <div style={{fontSize:12,color:"#64748B",marginBottom:4,fontWeight:500}}>{l}</div>
+                      <div style={{fontSize:20,fontWeight:800,color:"#0F172A",fontFamily:"'Be Vietnam Pro',sans-serif"}}>{v}</div>
+                      <div style={{fontSize:11,color:"#94A3B8",marginTop:3}}>{sub}</div>
+                    </div>
+                    <div style={{fontSize:28}}>{ic}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Bảng chi tiết */}
+            <div style={{background:"#fff",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(15,23,42,.07)"}}>
+              <div style={{padding:"14px 20px",borderBottom:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <h3 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:15,fontWeight:700,color:"#0F172A"}}>📊 Chi Tiết Lượt Tải & Doanh Thu</h3>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:12,color:"#94A3B8"}}>Sắp xếp theo lượt tải ↓</span>
+                  <button onClick={()=>reload()} style={{background:"#F1F5F9",color:"#475569",border:"1.5px solid #E2E8F0",borderRadius:8,padding:"4px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>🔄 Làm mới</button>
+                </div>
+              </div>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead>
+                  <tr style={{background:"#F8FAFC",borderBottom:"1px solid #E2E8F0"}}>
+                    {["#","Tên Bản Vẽ","Danh Mục","Giá","📥 Lượt Tải","💰 Doanh Thu Ước Tính"].map(h=>(
+                      <th key={h} style={{textAlign:"left",padding:"10px 14px",fontSize:11,fontWeight:700,color:"#64748B",textTransform:"uppercase",letterSpacing:.4,whiteSpace:"nowrap"}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {topProds.map((p,i)=>{
+                    const cat=catOf(p.category);
+                    const dl=p.downloadCount||0;
+                    const rev=p.isFree?0:dl*(p.price||0);
+                    const pct=totalDownloads>0?Math.round(dl/totalDownloads*100):0;
+                    return(
+                      <tr key={p._id} style={{borderBottom:"1px solid #F1F5F9"}}>
+                        <td style={{padding:"10px 14px",fontSize:13,fontWeight:700,color:"#94A3B8",width:32}}>{i+1}</td>
+                        <td style={{padding:"10px 14px",maxWidth:260}}>
+                          <div style={{fontSize:13,fontWeight:600,color:"#0F172A",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.title}</div>
+                          <div style={{marginTop:4,height:4,background:"#F1F5F9",borderRadius:2}}>
+                            <div style={{height:4,background:"#2563EB",borderRadius:2,width:`${pct}%`,transition:"width .3s"}}/>
+                          </div>
+                          <div style={{fontSize:10,color:"#94A3B8",marginTop:2}}>{pct}% tổng lượt tải</div>
+                        </td>
+                        <td style={{padding:"10px 14px"}}><span style={{background:cat?.bg,color:cat?.color,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{cat?.emoji} {cat?.label}</span></td>
+                        <td style={{padding:"10px 14px",whiteSpace:"nowrap",fontSize:13,fontWeight:600}}>
+                          {p.isFree?<span style={{color:"#059669"}}>Miễn phí</span>:<span style={{color:"#1D4ED8"}}>{(p.price||0).toLocaleString("vi-VN")}đ</span>}
+                        </td>
+                        <td style={{padding:"10px 14px",textAlign:"center"}}>
+                          <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"#F0F9FF",color:"#0284C7",borderRadius:8,padding:"4px 12px",fontSize:13,fontWeight:800}}>
+                            {dl.toLocaleString("vi-VN")}
+                          </span>
+                        </td>
+                        <td style={{padding:"10px 14px",fontWeight:700,fontSize:13,color:rev>0?"#059669":"#94A3B8"}}>
+                          {rev>0?rev.toLocaleString("vi-VN")+"đ":"—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p style={{fontSize:11.5,color:"#94A3B8",marginTop:10,textAlign:"center"}}>
+              * Doanh thu ước tính = lượt tải × giá niêm yết. Số thực tế phụ thuộc vào lịch sử giao dịch SePay.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {modal&&(
+        <ProductModal
+          prod={modal==="add"?null:modal}
+          token={token}
+          onClose={()=>setModal(null)}
+          onSave={()=>{setModal(null);reload();}}
+        />
+      )}
+    </div>
+  );
+}
+
+
+/* ── AdminPage: wrapper xử lý auth ── */
+function AdminPage() {
+  const [token, setToken] = useState(() => sessionStorage.getItem("adminToken") || "");
+  const logout = () => { sessionStorage.removeItem("adminToken"); setToken(""); };
+  if (!token) return <AdminLoginPage onLogin={setToken}/>;
+  return <AdminDashboard token={token} onLogout={logout}/>;
+}
+
+/* ════════════════════════════════════════
+   ROOT APP
+════════════════════════════════════════ */
 function App(){
   // Detect /admin path
   const isAdmin = window.location.pathname.startsWith("/admin");
