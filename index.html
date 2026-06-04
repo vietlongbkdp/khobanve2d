@@ -482,7 +482,8 @@ function Lightbox({imgs, startIdx, onClose}){
 }
 
 function DetailPage({prod,go,buy,prods=[]}){
-  if(!prod)return null;const cat=catOf(prod.cat||prod.category);const related=prods.filter(p=>(p.cat||p.category)===(prod.cat||prod.category)&&(p.id||p._id)!==(prod.id||prod._id)).slice(0,3);
+  if(!prod)return null;
+  const p=prod; // alias để dùng chungconst cat=catOf(prod.cat||prod.category);const related=prods.filter(p=>(p.cat||p.category)===(prod.cat||prod.category)&&(p.id||p._id)!==(prod.id||prod._id)).slice(0,3);
   return(<div style={{maxWidth:1100,margin:"0 auto",padding:"30px 20px"}}>
     <button onClick={()=>go("shop")} style={{background:"none",border:"none",color:"#2563EB",cursor:"pointer",fontSize:14,fontWeight:600,marginBottom:20,fontFamily:"inherit"}}>← Quay lại kho bản vẽ</button>
     <div style={{display:"flex",gap:28,flexWrap:"wrap"}}>
