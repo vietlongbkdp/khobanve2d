@@ -1024,15 +1024,21 @@ function AdminDashboard({ token, onLogout }) {
     })();
   }, []);
 
-  const reload = async () => {
-    setLoading(true);
+  const reload = async (silent=false) => {
+    if(!silent) setLoading(true);
     try{
       const r=await fetch("/api/products?admin=1",{headers:{Authorization:`Bearer ${token}`}});
       const d=await r.json();
       if(Array.isArray(d)) setProds(d);
     }catch{}
-    finally{setLoading(false);}
+    finally{if(!silent) setLoading(false);}
   };
+
+  // Auto-refresh mỗi 30 giây (silent)
+  useEffect(()=>{
+    const iv=setInterval(()=>reload(true),30000);
+    return()=>clearInterval(iv);
+  },[]);
 
   const del = async (id, title) => {
     if (!confirm(`Xóa "${title}"?`)) return;
@@ -1114,6 +1120,9 @@ function AdminDashboard({ token, onLogout }) {
               <option value="all">Tất cả danh mục</option>
               {CATS.map(c=><option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
             </select>
+            <button onClick={()=>reload()} style={{background:"#F1F5F9",color:"#475569",border:"1.5px solid #E2E8F0",borderRadius:8,padding:"0 14px",height:38,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}>
+              🔄 Làm mới
+            </button>
             <button onClick={()=>setModal("add")} style={{background:"linear-gradient(135deg,#1D4ED8,#2563EB)",color:"#fff",border:"none",borderRadius:8,padding:"0 20px",height:38,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
               ➕ Thêm bản vẽ
             </button>
@@ -1210,7 +1219,10 @@ function AdminDashboard({ token, onLogout }) {
             <div style={{background:"#fff",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(15,23,42,.07)"}}>
               <div style={{padding:"14px 20px",borderBottom:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <h3 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:15,fontWeight:700,color:"#0F172A"}}>📊 Chi Tiết Lượt Tải & Doanh Thu</h3>
-                <span style={{fontSize:12,color:"#94A3B8"}}>Sắp xếp theo lượt tải ↓</span>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:12,color:"#94A3B8"}}>Sắp xếp theo lượt tải ↓</span>
+                  <button onClick={()=>reload()} style={{background:"#F1F5F9",color:"#475569",border:"1.5px solid #E2E8F0",borderRadius:8,padding:"4px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>🔄 Làm mới</button>
+                </div>
               </div>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead>

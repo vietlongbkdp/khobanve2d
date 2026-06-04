@@ -63,8 +63,8 @@ module.exports = async function handler(req, res) {
     ));
   }
 
-  // Tăng download count (không await — không block redirect)
-  incrementDownload(productId);
+  // Tăng download count TRƯỚC khi redirect (await để đảm bảo Vercel không kill trước khi xong)
+  await incrementDownload(productId);
 
   // Redirect tải file
   return res.redirect(302, `https://drive.google.com/uc?export=download&id=${driveFileId}&confirm=t`);
