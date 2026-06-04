@@ -572,18 +572,32 @@ function DetailPage({prod,go,buy,prods=[]}){
             {isFree ? (
               <>
                 <div style={{fontSize:28,fontWeight:800,color:"#059669",marginBottom:16}}>Miễn phí</div>
-                <button className="kbv-btn" onClick={async(e)=>{
-                  const btn=e.currentTarget;btn.disabled=true;btn.textContent="⏳ Đang tạo link…";
-                  try{
-                    const r=await fetch(`/api/get-download-link?orderId=FREE&productId=${prodId}&amount=0`);
-                    const d=await r.json();
-                    const url=d.token?`/api/download?token=${d.token}`:d.url;
-                    if(url){window.location.href=url;btn.textContent="✅ Đang tải file...";}
-                    else{btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
-                  }catch(e){btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
-                }} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                  📥 Tải File Ngay (Miễn Phí)
-                </button>
+                {(()=>{
+                  const freeKey=`free_${prodId}`;
+                  const alreadyDl=typeof sessionStorage!=="undefined"&&sessionStorage.getItem(freeKey)==="done";
+                  if(alreadyDl) return(
+                    <div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:"15px",textAlign:"center",fontSize:15,fontWeight:700,color:"#059669"}}>
+                      ✅ Đã tải xuống thành công!
+                    </div>
+                  );
+                  return(
+                    <button className="kbv-btn" onClick={async(e)=>{
+                      const btn=e.currentTarget;btn.disabled=true;btn.textContent="⏳ Đang tạo link…";
+                      try{
+                        const r=await fetch(`/api/get-download-link?orderId=FREE&productId=${prodId}&amount=0`);
+                        const d=await r.json();
+                        const url=d.token?`/api/download?token=${d.token}`:d.url;
+                        if(url){
+                          sessionStorage.setItem(freeKey,"done");
+                          window.location.href=url;
+                          btn.textContent="✅ Đã tải xuống!";
+                        } else{btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
+                      }catch(e){btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
+                    }} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                      📥 Tải File Ngay (Miễn Phí)
+                    </button>
+                  );
+                })()}
               </>
             ) : (
               <>
@@ -768,8 +782,10 @@ function SuccessPage({order,go}){
               </a>
             </div>
            </div>
+          :downloaded
+            ?<div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:"15px",textAlign:"center",fontSize:15,fontWeight:700,color:"#059669"}}>✅ Đã tải xuống thành công!</div>
           :dlUrl
-            ?<a href={dlUrl} style={{display:"block",width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",textDecoration:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,textAlign:"center",marginBottom:10,boxSizing:"border-box"}}>📥 Tải File Ngay</a>
+            ?<button onClick={()=>doDownload(dlUrl)} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>📥 Tải File Ngay</button>
             :<div style={{textAlign:"center",padding:"12px",color:"#EF4444",fontSize:13}}>⚠️ Không lấy được link — liên hệ khobanve2d@gmail.com</div>
       }
       <button onClick={()=>go("home")} style={{width:"100%",background:"none",border:"1.5px solid #E2E8F0",color:"#64748B",borderRadius:12,padding:"13px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>← Về Trang Chủ</button>
