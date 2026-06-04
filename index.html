@@ -572,32 +572,18 @@ function DetailPage({prod,go,buy,prods=[]}){
             {isFree ? (
               <>
                 <div style={{fontSize:28,fontWeight:800,color:"#059669",marginBottom:16}}>Miễn phí</div>
-                {(()=>{
-                  const freeKey=`free_${prodId}`;
-                  const alreadyDl=typeof sessionStorage!=="undefined"&&sessionStorage.getItem(freeKey)==="done";
-                  if(alreadyDl) return(
-                    <div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:"15px",textAlign:"center",fontSize:15,fontWeight:700,color:"#059669"}}>
-                      ✅ Đã tải xuống thành công!
-                    </div>
-                  );
-                  return(
-                    <button className="kbv-btn" onClick={async(e)=>{
-                      const btn=e.currentTarget;btn.disabled=true;btn.textContent="⏳ Đang tạo link…";
-                      try{
-                        const r=await fetch(`/api/get-download-link?orderId=FREE&productId=${prodId}&amount=0`);
-                        const d=await r.json();
-                        const url=d.token?`/api/download?token=${d.token}`:d.url;
-                        if(url){
-                          sessionStorage.setItem(freeKey,"done");
-                          window.location.href=url;
-                          btn.textContent="✅ Đã tải xuống!";
-                        } else{btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
-                      }catch(e){btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
-                    }} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                      📥 Tải File Ngay (Miễn Phí)
-                    </button>
-                  );
-                })()}
+                <button className="kbv-btn" onClick={async(e)=>{
+                  const btn=e.currentTarget;btn.disabled=true;btn.textContent="⏳ Đang tạo link…";
+                  try{
+                    const r=await fetch(`/api/get-download-link?orderId=FREE&productId=${prodId}&amount=0`);
+                    const d=await r.json();
+                    const url=d.token?`/api/download?token=${d.token}`:d.url;
+                    if(url){window.location.href=url;btn.textContent="✅ Đang tải file...";}
+                    else{btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
+                  }catch(e){btn.textContent="⚠️ Lỗi — thử lại";btn.disabled=false;}
+                }} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  📥 Tải File Ngay (Miễn Phí)
+                </button>
               </>
             ) : (
               <>
@@ -731,38 +717,37 @@ function PayPage({order,payState,setPayState,go}){
 }
 
 function SuccessPage({order,go}){
-  const [dlUrl,setDlUrl]         = useState(null);
-  const [dlLoading,setDlLoading] = useState(true);
-  const [dlError,setDlError]     = useState(null);
+  const [dlUrl,setDlUrl]           = useState(null);
+  const [dlLoading,setDlLoading]   = useState(true);
+  const [dlError,setDlError]       = useState(null);
   const [downloaded,setDownloaded] = useState(false);
 
-  // Kiểm tra đã tải trong session chưa
   useEffect(()=>{
     if(!order) return;
-    if(sessionStorage.getItem(`dl_${order.id}`)==="done") setDownloaded(true);
+    if(sessionStorage.getItem("dl_"+order.id)==="done") setDownloaded(true);
   },[order]);
 
   const doDownload = (url) => {
-    sessionStorage.setItem(`dl_${order.id}`,"done");
+    sessionStorage.setItem("dl_"+order.id,"done");
     setDownloaded(true);
     window.location.href = url;
   };
 
   useEffect(()=>{
-    if(!order || downloaded) return;
+    if(!order||downloaded) return;
     (async()=>{
       try{
         const productId=order.prod.id||order.prod._id||"";
-        const res=await fetch(`/api/get-download-link?orderId=${order.id}&productId=${productId}&amount=${order.prod.price}`);
+        const res=await fetch("/api/get-download-link?orderId="+order.id+"&productId="+productId+"&amount="+order.prod.price);
         const data=await res.json();
         if(data.token){
-          const tokenUrl=`/api/download?token=${data.token}`;
+          const tokenUrl="/api/download?token="+data.token;
           setDlUrl(tokenUrl);
           setTimeout(()=>doDownload(tokenUrl),2500);
-        } else if(data.url){
+        }else if(data.url){
           setDlUrl(data.url);
           setTimeout(()=>doDownload(data.url),2500);
-        } else {
+        }else{
           setDlError("Không lấy được link tải. Liên hệ khobanve2d@gmail.com");
         }
       }catch(e){setDlError("Lỗi kết nối server.");}
@@ -771,61 +756,85 @@ function SuccessPage({order,go}){
   },[order]);
 
   if(!order) return null;
-
   return(
     <div style={{maxWidth:540,margin:"60px auto",padding:"0 20px",textAlign:"center"}}>
       <div className="kbv-fadeup" style={{background:"#fff",borderRadius:20,padding:"48px 32px",boxShadow:"0 8px 40px rgba(15,23,42,.14)"}}>
         <div style={{fontSize:72,marginBottom:16}}>🎉</div>
         <div style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:26,fontWeight:800,color:"#059669",marginBottom:8}}>Thanh Toán Thành Công!</div>
         <div style={{fontSize:15,color:"#64748B",marginBottom:24,lineHeight:1.7}}>
-          {downloaded
-            ? "File đã được tải xuống thành công."
-            : <span>Cảm ơn bạn đã mua bản vẽ.<br/>Đang tạo link tải bảo mật — chỉ dùng được 1 lần.</span>}
+          {downloaded?"File đã được tải xuống thành công.":<span>Cảm ơn bạn đã mua bản vẽ.<br/>Đang tạo link tải bảo mật.</span>}
         </div>
-
         <div style={{background:"#F0FDF4",borderRadius:14,padding:"18px 22px",marginBottom:24,border:"1px solid #BBF7D0"}}>
           <div style={{fontSize:13,color:"#64748B",marginBottom:8}}>📦 Đơn hàng của bạn</div>
           <div style={{fontWeight:700,color:"#0F172A",fontSize:14,lineHeight:1.5}}>{order.prod.title}</div>
           <div style={{fontSize:12,color:"#94A3B8",marginTop:4}}>Mã đơn: <b>{order.id}</b></div>
         </div>
-
-        {/* Nút tải */}
-        {dlLoading && !downloaded
-          ? <div style={{padding:"16px",color:"#64748B",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-              <span style={{display:"inline-block",width:16,height:16,border:"2px solid #2563EB",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
-              Đang tạo link tải bảo mật…
-            </div>
-          : dlError
-            ? <div style={{textAlign:"center",padding:"14px",color:"#EF4444",fontSize:13,lineHeight:1.8}}>
-                {dlError}
-                <div style={{marginTop:10}}>
-                  <a href="https://zalo.me/0913331916" target="_blank"
-                    style={{display:"inline-flex",alignItems:"center",gap:6,background:"#0068FF",color:"#fff",textDecoration:"none",borderRadius:10,padding:"8px 18px",fontSize:13,fontWeight:600}}>
-                    💬 Zalo: 0913331916
-                  </a>
-                </div>
+        {dlLoading&&!downloaded
+          ?<div style={{padding:"16px",color:"#64748B",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            <span style={{display:"inline-block",width:16,height:16,border:"2px solid #2563EB",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+            Đang tạo link tải bảo mật…
+          </div>
+          :dlError
+            ?<div style={{padding:"14px",color:"#EF4444",fontSize:13,lineHeight:1.8}}>
+              {dlError}
+              <div style={{marginTop:10}}>
+                <a href="https://zalo.me/0913331916" target="_blank" style={{display:"inline-flex",alignItems:"center",gap:6,background:"#0068FF",color:"#fff",textDecoration:"none",borderRadius:10,padding:"8px 18px",fontSize:13,fontWeight:600}}>💬 Zalo: 0913331916</a>
               </div>
-            : downloaded
-              ? <div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:"15px",textAlign:"center",fontSize:15,fontWeight:700,color:"#059669",marginBottom:10}}>
-                  ✅ Đã tải xuống thành công!
-                </div>
-              : dlUrl
-                ? <button onClick={()=>doDownload(dlUrl)}
-                    style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>
-                    📥 Tải File Ngay
-                  </button>
-                : null
+            </div>
+            :downloaded
+              ?<div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:12,padding:"15px",textAlign:"center",fontSize:15,fontWeight:700,color:"#059669",marginBottom:10}}>✅ Đã tải xuống thành công!</div>
+              :dlUrl
+                ?<button onClick={()=>doDownload(dlUrl)} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>📥 Tải File Ngay</button>
+                :null
         }
-
-        <button onClick={()=>go("home")} style={{width:"100%",background:"none",border:"1.5px solid #E2E8F0",color:"#64748B",borderRadius:12,padding:"13px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-          ← Về Trang Chủ
-        </button>
-        {!downloaded && <p style={{fontSize:11.5,color:"#94A3B8",marginTop:16}}>⏱ Link tự động mở sau 3 giây. Mỗi link chỉ dùng 1 lần trong 15 phút.</p>}
+        <button onClick={()=>go("home")} style={{width:"100%",background:"none",border:"1.5px solid #E2E8F0",color:"#64748B",borderRadius:12,padding:"13px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>← Về Trang Chủ</button>
+        {!downloaded&&<p style={{fontSize:11.5,color:"#94A3B8",marginTop:16}}>⏱ Link tự động mở sau 3 giây.</p>}
       </div>
     </div>
   );
 }
 
+
+function useProducts() {
+  const [prods, setProds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    fetch("/api/products")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          const normalized = data.map(p => ({
+            id:        p._id,
+            cat:       p.category,
+            title:     p.title,
+            price:     p.price,
+            oldPrice:  p.originalPrice || null,
+            desc:      p.description,
+            images:    p.images || [],
+            ft:        p.fileType,
+            fc:        p.fileCount || 0,
+            fileCount: p.fileCount || 0,
+            fileSize:  p.fileSize,
+            dl:        p.downloadCount || 0,
+            rate:      p.rating || 5,
+            rev:       p.reviewCount || 0,
+            free:      !!p.isFree,
+            isFree:    !!p.isFree,
+            hot:       p.isHot || false,
+            isHot:     p.isHot || false,
+            isNew:     p.isNew || false,
+            tags:      p.tags || [],
+            code:      p.code,
+            subcategory: p.subcategory,
+          }));
+          setProds(normalized);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+  return { prods, loading };
+}
 
 function App(){
   // Detect /admin path
