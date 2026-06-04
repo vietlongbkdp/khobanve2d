@@ -510,7 +510,7 @@ function DetailPage({prod,go,buy,prods=[]}){
           </>);
         })()}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14}}>
-          {[["📁 Số file",`${prod.fileCount||prod.fc||0} files`],["📥 Lượt tải",(prod.dl||prod.downloadCount||0).toLocaleString()],["⭐ Đánh giá",`${prod.rate}/5 (${prod.rev} đánh giá)`],["💾 Định dạng",prod.ft]].map(([k,v])=>(
+          {[["📁 Số file",`${p.fileCount||p.fc||0} files`],["📥 Lượt tải",(p.dl||p.downloadCount||0).toLocaleString()],["⭐ Đánh giá",`${prod.rate}/5 (${prod.rev} đánh giá)`],["💾 Định dạng",prod.ft]].map(([k,v])=>(
             <div key={k} style={{background:"#fff",borderRadius:10,padding:"12px 14px",boxShadow:"0 1px 4px rgba(15,23,42,.06)"}}>
               <div style={{fontSize:11,color:"#94A3B8",marginBottom:2}}>{k}</div>
               <div style={{fontSize:13,fontWeight:700,color:"#0F172A"}}>{v}</div>
@@ -1137,7 +1137,7 @@ function AdminDashboard({ token, onLogout }) {
                 : <table style={{width:"100%",borderCollapse:"collapse"}}>
                     <thead>
                       <tr style={{background:"#F8FAFC",borderBottom:"1px solid #E2E8F0"}}>
-                        {["Mã","Tên Bản Vẽ","Danh Mục","Giá","📥 Lượt Tải","Files","Trạng thái","Thao tác"].map(h=>(
+                        {["#","Mã","Tên Bản Vẽ","Danh Mục","Giá","📥 Lượt Tải","Files","Trạng thái","Thao tác"].map(h=>(
                           <th key={h} style={{textAlign:"left",padding:"10px 14px",fontSize:11,fontWeight:700,color:"#64748B",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
                         ))}
                       </tr>
@@ -1147,6 +1147,7 @@ function AdminDashboard({ token, onLogout }) {
                         const cat=catOf(p.category);
                         return(
                           <tr key={p._id} style={{borderBottom:"1px solid #F1F5F9",background:i%2===0?"#fff":"#FAFBFC"}}>
+                            <td style={{padding:"10px 14px",fontSize:13,fontWeight:700,color:"#94A3B8",textAlign:"center",width:40}}>{i+1}</td>
                             <td style={{padding:"10px 14px",fontSize:12,color:"#64748B",fontFamily:"monospace"}}>{p.code||"—"}</td>
                             <td style={{padding:"10px 14px",maxWidth:240}}>
                               <div style={{display:"flex",alignItems:"center",gap:8}}>
