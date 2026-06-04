@@ -482,43 +482,20 @@ function Lightbox({imgs, startIdx, onClose}){
 }
 
 function DetailPage({prod,go,buy,prods=[]}){
-  const [detail,setDetail] = React.useState(null);
-  const [detailLoading,setDetailLoading] = React.useState(true);
-
-  useEffect(()=>{
-    if(!prod) return;
-    const id = prod.id || prod._id;
-    if(!id) return;
-    setDetailLoading(true);
-    fetch(`/api/products?id=${id}`)
-      .then(r=>r.json())
-      .then(d=>{ if(d&&d._id) setDetail(d); })
-      .catch(()=>{})
-      .finally(()=>setDetailLoading(false));
-  },[prod]);
-
-  if(!prod) return null;
-  // Dùng detail (full data) nếu đã load, fallback về prod (chỉ có id/code/title)
-  const p = detail || prod;
-  if(detailLoading) return(
-    <div style={{maxWidth:1100,margin:"0 auto",padding:"60px 20px",textAlign:"center",color:"#64748B"}}>
-      <div style={{fontSize:40,marginBottom:12}}>⏳</div>
-      <div style={{fontSize:16,fontWeight:600}}>Đang tải thông tin bản vẽ...</div>
-    </div>
-  );const cat=catOf(p.cat||p.category);const related=prods.filter(p=>(pp.cat||pp.category)===(p.cat||p.category)&&(pp.id||pp._id)!==(p.id||p._id)).slice(0,3);
+  if(!prod)return null;const cat=catOf(prod.cat||prod.category);const related=prods.filter(p=>(p.cat||p.category)===(prod.cat||prod.category)&&(p.id||p._id)!==(prod.id||prod._id)).slice(0,3);
   return(<div style={{maxWidth:1100,margin:"0 auto",padding:"30px 20px"}}>
     <button onClick={()=>go("shop")} style={{background:"none",border:"none",color:"#2563EB",cursor:"pointer",fontSize:14,fontWeight:600,marginBottom:20,fontFamily:"inherit"}}>← Quay lại kho bản vẽ</button>
     <div style={{display:"flex",gap:28,flexWrap:"wrap"}}>
       <div style={{flex:"1 1 400px"}}>
         {/* Gallery ảnh thật + Lightbox */}
         {(()=>{
-          const imgs=(p.images&&p.images.length>0)?p.images:[getBP(p.cat||p.category)];
+          const imgs=(prod.images&&prod.images.length>0)?prod.images:[getBP(prod.cat||prod.category)];
           const[sel,setSel]=React.useState(0);
           const[lb,setLb]=React.useState(null);
           return(<>
             {lb!==null&&<Lightbox imgs={imgs} startIdx={lb} onClose={()=>setLb(null)}/>}
             <div onClick={()=>setLb(sel)} style={{borderRadius:16,overflow:"hidden",boxShadow:"0 4px 24px rgba(15,23,42,.12)",marginBottom:10,cursor:"zoom-in",position:"relative"}}>
-              <img src={imgs[Math.min(sel,imgs.length-1)]} alt={p.title} style={{width:"100%",height:320,objectFit:"cover",display:"block"}}/>
+              <img src={imgs[Math.min(sel,imgs.length-1)]} alt={prod.title} style={{width:"100%",height:320,objectFit:"cover",display:"block"}}/>
               <div style={{position:"absolute",bottom:10,right:10,background:"rgba(0,0,0,.5)",color:"#fff",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:600,backdropFilter:"blur(4px)",pointerEvents:"none"}}>🔍 Xem ảnh to</div>
             </div>
             {imgs.length>1&&(
@@ -533,7 +510,7 @@ function DetailPage({prod,go,buy,prods=[]}){
           </>);
         })()}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:14}}>
-          {[["📁 Số file",`${p.fileCount||p.fc||0} files`],["📥 Lượt tải",(p.dl||p.downloadCount||0).toLocaleString()],["⭐ Đánh giá",`${p.rate}/5 (${p.rev} đánh giá)`],["💾 Định dạng",p.ft]].map(([k,v])=>(
+          {[["📁 Số file",`${prod.fileCount||prod.fc||0} files`],["📥 Lượt tải",(prod.dl||prod.downloadCount||0).toLocaleString()],["⭐ Đánh giá",`${prod.rate}/5 (${prod.rev} đánh giá)`],["💾 Định dạng",prod.ft]].map(([k,v])=>(
             <div key={k} style={{background:"#fff",borderRadius:10,padding:"12px 14px",boxShadow:"0 1px 4px rgba(15,23,42,.06)"}}>
               <div style={{fontSize:11,color:"#94A3B8",marginBottom:2}}>{k}</div>
               <div style={{fontSize:13,fontWeight:700,color:"#0F172A"}}>{v}</div>
@@ -544,19 +521,19 @@ function DetailPage({prod,go,buy,prods=[]}){
       <div style={{flex:"1 1 320px"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
           <Badge label={`${cat?.emoji} ${cat?.label}`} color={cat?.color} bg={cat?.bg}/>
-          {p.free&&<Badge label="MIỄN PHÍ" color="#fff" bg="#059669"/>}
-          {p.isNew&&<Badge label="MỚI" color="#fff" bg="#2563EB"/>}
+          {prod.free&&<Badge label="MIỄN PHÍ" color="#fff" bg="#059669"/>}
+          {prod.isNew&&<Badge label="MỚI" color="#fff" bg="#2563EB"/>}
         </div>
-        <h1 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:22,fontWeight:800,color:"#0F172A",lineHeight:1.4,marginBottom:14}}>{p.title}</h1>
-        <div style={{marginBottom:16}}><Stars r={p.rate}/><span style={{fontSize:12,color:"#94A3B8",marginLeft:8}}>{p.rev} đánh giá</span></div>
+        <h1 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:22,fontWeight:800,color:"#0F172A",lineHeight:1.4,marginBottom:14}}>{prod.title}</h1>
+        <div style={{marginBottom:16}}><Stars r={prod.rate}/><span style={{fontSize:12,color:"#94A3B8",marginLeft:8}}>{prod.rev} đánh giá</span></div>
         <div style={{background:"#F8FAFC",borderRadius:12,padding:"14px 16px",marginBottom:20,border:"1px solid #E2E8F0"}}>
-          <div style={{fontSize:13.5,color:"#334155",lineHeight:1.7}}>{p.desc}</div>
+          <div style={{fontSize:13.5,color:"#334155",lineHeight:1.7}}>{prod.desc}</div>
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:24}}>
-          {p.tags?.map(t=><span key={t} style={{background:"#EFF6FF",color:"#2563EB",borderRadius:20,padding:"4px 12px",fontSize:11.5,fontWeight:600}}>#{t}</span>)}
+          {prod.tags?.map(t=><span key={t} style={{background:"#EFF6FF",color:"#2563EB",borderRadius:20,padding:"4px 12px",fontSize:11.5,fontWeight:600}}>#{t}</span>)}
         </div>
         <div style={{background:"#fff",borderRadius:16,padding:"22px 20px",boxShadow:"0 4px 20px rgba(15,23,42,.1)",border:"1px solid #E2E8F0"}}>
-          {(p.free||p.isFree)?(
+          {(prod.free||prod.isFree)?(
             <><div style={{fontSize:28,fontWeight:800,color:"#059669",marginBottom:16}}>Miễn phí</div>
             <button className="kbv-btn" onClick={async(e)=>{
                 const btn=e.currentTarget;btn.disabled=true;btn.textContent="⏳ Đang tạo link…";
@@ -570,11 +547,11 @@ function DetailPage({prod,go,buy,prods=[]}){
               }} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>📥 Tải File Ngay (Miễn Phí)</button></>
           ):(
             <><div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:6}}>
-              <span style={{fontSize:32,fontWeight:800,color:"#1D4ED8",fontFamily:"'Be Vietnam Pro',sans-serif"}}>{vnd(p.price)}</span>
-              {p.oldPrice&&<span style={{fontSize:16,color:"#94A3B8",textDecoration:"line-through"}}>{vnd(p.oldPrice)}</span>}
+              <span style={{fontSize:32,fontWeight:800,color:"#1D4ED8",fontFamily:"'Be Vietnam Pro',sans-serif"}}>{vnd(prod.price)}</span>
+              {prod.oldPrice&&<span style={{fontSize:16,color:"#94A3B8",textDecoration:"line-through"}}>{vnd(prod.oldPrice)}</span>}
             </div>
-            {p.oldPrice&&<div style={{fontSize:12.5,color:"#059669",fontWeight:600,marginBottom:14}}>💰 Tiết kiệm {vnd(p.oldPrice-p.price)} ({Math.round((1-p.price/p.oldPrice)*100)}% giảm)</div>}
-            <button className="kbv-btn" onClick={()=>buy(p)} style={{width:"100%",background:"linear-gradient(135deg,#1D4ED8,#2563EB)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>🛒 Mua Ngay & Tải Xuống</button>
+            {prod.oldPrice&&<div style={{fontSize:12.5,color:"#059669",fontWeight:600,marginBottom:14}}>💰 Tiết kiệm {vnd(prod.oldPrice-prod.price)} ({Math.round((1-prod.price/prod.oldPrice)*100)}% giảm)</div>}
+            <button className="kbv-btn" onClick={()=>buy(prod)} style={{width:"100%",background:"linear-gradient(135deg,#1D4ED8,#2563EB)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>🛒 Mua Ngay & Tải Xuống</button>
             <div style={{fontSize:11.5,color:"#94A3B8",textAlign:"center"}}>🔒 Thanh toán an toàn qua VietQR • Nhận link tải file ngay sau khi thanh toán</div></>
           )}
         </div>
@@ -583,7 +560,7 @@ function DetailPage({prod,go,buy,prods=[]}){
     {related.length>0&&(<div style={{marginTop:48}}>
       <h2 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:20,fontWeight:800,color:"#0F172A",marginBottom:18}}>Bản Vẽ Liên Quan</h2>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:18}}>
-        {related.map(rp=><ProductCard key={p.id} p={p} onOpen={xp=>go("detail",xp)}/>)}
+        {related.map(p=><ProductCard key={p.id} p={p} onOpen={rp=>go("detail",rp)}/>)}
       </div>
     </div>)}
   </div>);
