@@ -61,10 +61,12 @@ module.exports = async function handler(req, res) {
     ));
   }
 
-  // Tăng count không block (fire-and-forget an toàn)
-  incrementDownload(productId);
+  // Await increment với timeout 3s — đảm bảo Vercel không kill trước khi DB cập nhật
+  await Promise.race([
+    incrementDownload(productId),
+    new Promise(resolve => setTimeout(resolve, 3000))
+  ]);
 
-  // Redirect ngay lập tức
   return res.redirect(302, `https://drive.google.com/uc?export=download&id=${driveFileId}&confirm=t`);
 };
 
