@@ -75,7 +75,7 @@ module.exports = async function handler(req, res) {
         rating: Number(body.rating) || 5,
         reviewCount: Number(body.reviewCount) || 0,
         fileCount: Number(body.fileCount) || 1,
-        downloadCount: Math.floor(Math.random() * 100), viewCount: 0,
+        downloadCount: 0, viewCount: 0,
         tags: Array.isArray(body.tags) ? body.tags : [],
         createdAt: new Date(), updatedAt: new Date(),
       };
