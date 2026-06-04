@@ -1,7 +1,3 @@
-/**
- * /api/download.js
- * Verify HMAC token → redirect tải file → tăng downloadCount trong MongoDB
- */
 const crypto = require("crypto");
 
 function verifyToken(token) {
@@ -19,25 +15,30 @@ function verifyToken(token) {
   } catch { return null; }
 }
 
-// Tăng downloadCount không đồng bộ — không block redirect
-async function incrementDownload(productId) {
+// Tăng download count — không block redirect nếu MongoDB chậm
+function incrementDownload(productId) {
+  if (!process.env.MONGODB_URL) return;
   try {
     const { MongoClient, ObjectId } = require("mongodb");
-    const client = new MongoClient(process.env.MONGODB_URL, { serverSelectionTimeoutMS: 4000 });
-    await client.connect();
-    try {
+    const client = new MongoClient(process.env.MONGODB_URL, {
+      serverSelectionTimeoutMS: 3000,
+      connectTimeoutMS: 3000,
+    });
+    client.connect().then(() => {
       const col = client.db("khobanve2d").collection("products");
       const filter = {};
       try { filter._id = new ObjectId(productId); } catch { filter._id = productId; }
-      await col.updateOne(filter, { $inc: { downloadCount: 1 } });
-    } finally { await client.close(); }
+      return col.updateOne(filter, { $inc: { downloadCount: 1 } });
+    }).catch(e => console.error("[dl count]", e.message))
+      .finally(() => client.close().catch(() => {}));
   } catch (e) {
-    console.error("[download] count error:", e.message);
+    console.error("[dl count setup]", e.message);
   }
 }
 
 module.exports = async function handler(req, res) {
   const { token } = req.query;
+
   if (!token) return res.status(400).send(page("Link không hợp lệ", "Không tìm thấy token tải file."));
 
   const payload = verifyToken(token);
@@ -46,10 +47,7 @@ module.exports = async function handler(req, res) {
     return res.status(410).send(page(
       "Link đã hết hạn hoặc không hợp lệ",
       `Link tải chỉ có hiệu lực <b>15 phút</b> sau khi thanh toán.<br/>
-      Nếu bạn gặp vấn đề, vui lòng liên hệ hỗ trợ:<br/>
-      <a href="https://zalo.me/0913331916" target="_blank" style="color:#2563EB;font-weight:600">
-        💬 Zalo: 0913331916
-      </a>`
+      <a href="https://zalo.me/0913331916" target="_blank" style="color:#2563EB;font-weight:600">💬 Zalo hỗ trợ: 0913331916</a>`
     ));
   }
 
@@ -58,15 +56,15 @@ module.exports = async function handler(req, res) {
   if (!driveFileId || driveFileId.startsWith("THAY")) {
     return res.status(404).send(page(
       "File chưa sẵn sàng",
-      `Admin chưa cập nhật file cho sản phẩm này.<br/>
-      Liên hệ hỗ trợ: <a href="https://zalo.me/0913331916" target="_blank" style="color:#2563EB;font-weight:600">💬 Zalo: 0913331916</a>`
+      `Admin chưa cập nhật file này.<br/>
+      <a href="https://zalo.me/0913331916" target="_blank" style="color:#2563EB;font-weight:600">💬 Zalo hỗ trợ: 0913331916</a>`
     ));
   }
 
-  // Tăng download count TRƯỚC khi redirect (await để đảm bảo Vercel không kill trước khi xong)
-  await incrementDownload(productId);
+  // Tăng count không block (fire-and-forget an toàn)
+  incrementDownload(productId);
 
-  // Redirect tải file
+  // Redirect ngay lập tức
   return res.redirect(302, `https://drive.google.com/uc?export=download&id=${driveFileId}&confirm=t`);
 };
 
@@ -79,20 +77,19 @@ function page(title, msg) {
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Be Vietnam Pro',sans-serif;background:#F8FAFC;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
   .c{background:#fff;border-radius:20px;padding:48px 36px;max-width:460px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(15,23,42,.12);border:1px solid #E2E8F0}
-  .i{font-size:56px;margin-bottom:16px}
-  h1{font-size:19px;font-weight:700;color:#0F172A;margin-bottom:10px}
+  h1{font-size:19px;font-weight:700;color:#0F172A;margin:16px 0 10px}
   p{font-size:14px;color:#64748B;line-height:1.8;margin-bottom:24px}
-  .btn{display:inline-block;background:#2563EB;color:#fff;text-decoration:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:600;margin-top:4px}
-  .zalo{display:inline-block;background:#0068FF;color:#fff;text-decoration:none;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:600;margin:8px 4px}
+  .btn{display:inline-block;background:#2563EB;color:#fff;text-decoration:none;border-radius:10px;padding:11px 26px;font-size:14px;font-weight:600;margin:4px}
+  .zalo{display:inline-block;background:#0068FF;color:#fff;text-decoration:none;border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;margin:4px}
 </style>
 </head>
 <body><div class="c">
-  <div class="i">⏳</div>
+  <div style="font-size:54px">⏳</div>
   <h1>${title}</h1>
   <p>${msg}</p>
   <div>
     <a class="zalo" href="https://zalo.me/0913331916" target="_blank">💬 Zalo Hỗ Trợ</a>
-    <a class="btn" href="/">← Về Trang Chủ</a>
+    <a class="btn" href="/">← Trang Chủ</a>
   </div>
 </div></body></html>`;
 }

@@ -673,7 +673,8 @@ function SuccessPage({order,go}){
     if(!order)return;
     const fetchToken=async()=>{
       try{
-        const res=await fetch(`/api/get-download-link?orderId=${order.id}&productId=${order.prod.id}&amount=${order.prod.price}`);
+        const productId=order.prod.id||order.prod._id||"";
+        const res=await fetch(`/api/get-download-link?orderId=${order.id}&productId=${productId}&amount=${order.prod.price}`);
         const data=await res.json();
         if(data.token){
           // Mức 3: one-time token → /api/download?token=xxx
