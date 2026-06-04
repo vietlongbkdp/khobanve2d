@@ -6,13 +6,13 @@
 <meta name="description" content="Kho Bản Vẽ 2D — Thư viện bản vẽ AutoCAD chuyên nghiệp: kiến trúc, cơ khí, lazer CNC, đồ án"/>
 <title>KhoBanVe2D — Thư Viện Bản Vẽ AutoCAD Chuyên Nghiệp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#F1F5F9;font-family:'Plus Jakarta Sans',sans-serif}
+body{background:#F1F5F9;font-family:'Be Vietnam Pro',sans-serif}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#F1F5F9}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
 .kbv-card{transition:transform .22s,box-shadow .22s}.kbv-card:hover{transform:translateY(-5px);box-shadow:0 16px 40px rgba(15,23,42,.13)!important}
 .kbv-btn{transition:background .18s,transform .12s}.kbv-btn:hover{transform:translateY(-1px)}.kbv-btn:active{transform:translateY(0)}
@@ -61,25 +61,52 @@ function Stars({r}){return(<span style={{fontSize:12}}>{[1,2,3,4,5].map(i=><span
 function Badge({label,color,bg}){return<span style={{display:"inline-block",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:bg,color,letterSpacing:.3}}>{label}</span>;}
 
 function ProductCard({p,onOpen}){
-  const cat=catOf(p.cat||p.category);const disc=p.oldPrice?Math.round((1-p.price/p.oldPrice)*100):0;
-  return(<div className="kbv-card" onClick={()=>onOpen(p)} style={{background:"#fff",borderRadius:14,overflow:"hidden",boxShadow:"0 2px 12px rgba(15,23,42,.08)",cursor:"pointer",position:"relative"}}>
-    <div style={{position:"relative",overflow:"hidden",height:185}}>
-      <img src={(p.images&&p.images[0])||getBP(p.cat||p.category)} alt={p.title} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-      <div style={{position:"absolute",bottom:0,left:0,right:0,height:3,background:cat?.color||"#2563EB"}}/>
-      <div style={{position:"absolute",top:10,left:10,display:"flex",flexDirection:"column",gap:5}}>
-        {p.free&&<Badge label="MIỄN PHÍ" color="#fff" bg="#059669"/>}
-        {p.isNew&&!p.free&&<Badge label="MỚI" color="#fff" bg="#2563EB"/>}
-        {p.hot&&!p.free&&<Badge label="🔥 HOT" color="#fff" bg="#DC2626"/>}
+  const cat=catOf(p.cat||p.category);
+  const isFree=p.free||p.isFree;
+  const isNew=p.isNew;
+  const isHot=p.hot||p.isHot;
+  const price=p.price||0;
+  const oldPrice=p.oldPrice||p.originalPrice||null;
+  const disc=oldPrice&&price?Math.round((1-price/oldPrice)*100):0;
+  const dl=p.dl||p.downloadCount||0;
+  const rate=p.rate||p.rating||5;
+  return(<div className="kbv-card" onClick={()=>onOpen(p)} style={{
+    background:"#fff",borderRadius:16,overflow:"hidden",
+    boxShadow:"0 1px 3px rgba(15,23,42,.07),0 8px 20px rgba(15,23,42,.06)",
+    cursor:"pointer",position:"relative",border:"1px solid #F1F5F9"}}>
+    <div style={{position:"relative",overflow:"hidden",height:190}}>
+      <img src={(p.images&&p.images[0])||getBP(p.cat||p.category)} alt={p.title}
+        style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform .4s"}}
+        onMouseEnter={e=>e.target.style.transform="scale(1.05)"}
+        onMouseLeave={e=>e.target.style.transform="scale(1)"}/>
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(15,23,42,.4) 0%,transparent 50%)"}}/>
+      <div style={{position:"absolute",top:10,left:10,display:"flex",flexDirection:"column",gap:4}}>
+        {isFree&&<Badge label="MIỄN PHÍ" color="#fff" bg="#059669"/>}
+        {isNew&&!isFree&&<Badge label="✦ MỚI" color="#fff" bg="#2563EB"/>}
+        {isHot&&!isFree&&<Badge label="🔥 HOT" color="#fff" bg="#DC2626"/>}
       </div>
-      {disc>0&&<span style={{position:"absolute",top:10,right:10,background:"#EF4444",color:"#fff",padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:700}}>-{disc}%</span>}
+      {disc>0&&<span style={{position:"absolute",top:10,right:10,background:"#EF4444",color:"#fff",padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:700,boxShadow:"0 2px 8px rgba(239,68,68,.4)"}}>-{disc}%</span>}
+      <div style={{position:"absolute",bottom:8,left:10,right:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{background:"rgba(15,23,42,.65)",backdropFilter:"blur(4px)",color:cat?.color||"#60A5FA",padding:"3px 9px",borderRadius:8,fontSize:10.5,fontWeight:700,letterSpacing:.3}}>
+          {cat?.emoji} {cat?.label}
+        </span>
+        <span style={{fontSize:11,color:"rgba(255,255,255,.7)"}}>📥 {dl.toLocaleString()}</span>
+      </div>
     </div>
     <div style={{padding:"14px 16px 16px"}}>
-      <div style={{fontSize:11,color:cat?.color,fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:.5}}>{cat?.emoji} {cat?.label}</div>
-      <div style={{fontSize:13.5,fontWeight:600,color:"#0F172A",lineHeight:1.45,marginBottom:10,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",minHeight:38}}>{p.title}</div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><Stars r={p.rate}/><span style={{fontSize:11,color:"#94A3B8"}}>📥 {p.dl.toLocaleString()}</span></div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div>{p.free?<span style={{fontSize:15,fontWeight:800,color:"#059669"}}>Miễn phí</span>:<><span style={{fontSize:15,fontWeight:800,color:"#1D4ED8"}}>{vnd(p.price)}</span>{p.oldPrice&&<span style={{fontSize:11.5,color:"#94A3B8",textDecoration:"line-through",marginLeft:6}}>{vnd(p.oldPrice)}</span>}</>}</div>
-        <span style={{fontSize:11,color:"#94A3B8"}}>📁 {p.fc} files</span>
+      <div style={{fontSize:13.5,fontWeight:700,color:"#0F172A",lineHeight:1.45,marginBottom:10,
+        display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",minHeight:40}}>
+        {p.title}
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingTop:10,borderTop:"1px solid #F1F5F9"}}>
+        <div>
+          {isFree
+            ?<span style={{fontSize:15,fontWeight:800,color:"#059669"}}>Miễn phí</span>
+            :<><span style={{fontSize:16,fontWeight:800,color:"#1D4ED8"}}>{vnd(price)}</span>
+              {oldPrice&&<span style={{fontSize:11.5,color:"#94A3B8",textDecoration:"line-through",marginLeft:6}}>{vnd(oldPrice)}</span>}</>
+          }
+        </div>
+        <Stars r={rate}/>
       </div>
     </div>
   </div>);
@@ -90,7 +117,7 @@ function Header({page,go,query,setQuery}){
     <div style={{maxWidth:1200,margin:"0 auto",padding:"0 20px",height:64,display:"flex",alignItems:"center",gap:20}}>
       <div onClick={()=>go("home")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
         <div style={{width:36,height:36,background:"linear-gradient(135deg,#1D4ED8,#3B82F6)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📐</div>
-        <div><div style={{fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:800,color:"#0F172A",lineHeight:1.1}}>KhoBanVe<span style={{color:"#2563EB"}}>2D</span></div><div style={{fontSize:9.5,color:"#94A3B8",fontWeight:500,letterSpacing:.5}}>THƯ VIỆN BẢN VẼ AUTOCAD</div></div>
+        <div><div style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:16,fontWeight:800,color:"#0F172A",lineHeight:1.1}}>KhoBanVe<span style={{color:"#2563EB"}}>2D</span></div><div style={{fontSize:9.5,color:"#94A3B8",fontWeight:500,letterSpacing:.5}}>THƯ VIỆN BẢN VẼ AUTOCAD</div></div>
       </div>
       <div style={{flex:1,maxWidth:480,position:"relative"}}>
         <input value={query} onChange={e=>{setQuery(e.target.value);if(page!=="shop")go("shop");}} placeholder="Tìm bản vẽ, đồ án, hoa văn lazer…" style={{width:"100%",height:40,border:"1.5px solid #E2E8F0",borderRadius:10,padding:"0 16px 0 42px",fontSize:13.5,outline:"none",background:"#F8FAFC",fontFamily:"inherit"}}/>
@@ -105,67 +132,143 @@ function Header({page,go,query,setQuery}){
   </header>);
 }
 
-function HomePage({go}){
-  const featured=PRODS.filter(p=>p.hot).slice(0,6);const free=PRODS.filter(p=>p.free);
-  return(<div>
-    <div style={{background:"linear-gradient(135deg,#0F172A 0%,#1E3A8A 50%,#1D4ED8 100%)",padding:"64px 20px 80px",textAlign:"center",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",inset:0,opacity:.06,backgroundImage:"linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
-      <div style={{position:"relative",maxWidth:700,margin:"0 auto"}}>
-        <div style={{display:"inline-block",background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",borderRadius:30,padding:"5px 18px",fontSize:12.5,color:"#BAE6FD",marginBottom:20,fontWeight:600}}>🚀 500+ bản vẽ AutoCAD chất lượng cao</div>
-        <h1 style={{fontFamily:"'Syne',sans-serif",fontSize:44,fontWeight:800,color:"#fff",lineHeight:1.15,marginBottom:16}}>Kho Bản Vẽ AutoCAD<br/><span style={{color:"#60A5FA"}}>Chuyên Nghiệp Nhất Việt Nam</span></h1>
-        <p style={{fontSize:16,color:"#CBD5E1",marginBottom:32,lineHeight:1.7}}>Kiến trúc • Cơ khí • Lazer CNC • Đồ án • Thi công XD<br/>Tải ngay sau thanh toán • File DWG tương thích mọi phiên bản</p>
-        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-          <button className="kbv-btn" onClick={()=>go("shop")} style={{background:"#2563EB",color:"#fff",border:"none",borderRadius:12,padding:"14px 32px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Xem Kho Bản Vẽ →</button>
-          <button className="kbv-btn" onClick={()=>go("shop")} style={{background:"rgba(255,255,255,.12)",color:"#fff",border:"1px solid rgba(255,255,255,.25)",borderRadius:12,padding:"14px 28px",fontSize:15,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>📥 Bản Vẽ Miễn Phí</button>
+function HomePage({go,prods=PRODS}){
+  const countByCat={};
+  prods.forEach(p=>{const cat=p.cat||p.category;countByCat[cat]=(countByCat[cat]||0)+1;});
+  const featured=prods.filter(p=>p.hot||p.isHot||p.isFeatured).slice(0,6);
+  const free=prods.filter(p=>p.free||p.isFree).slice(0,4);
+  const newest=prods.filter(p=>p.isNew).slice(0,4);
+  return(<div style={{background:"#F8FAFC"}}>
+    {/* HERO */}
+    <div style={{background:"linear-gradient(160deg,#0A1628 0%,#0F2860 45%,#1a3fa8 100%)",padding:"72px 20px 56px",textAlign:"center",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",inset:0,opacity:.05,backgroundImage:"linear-gradient(rgba(255,255,255,.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.8) 1px,transparent 1px)",backgroundSize:"50px 50px"}}/>
+      <div style={{position:"absolute",top:"20%",left:"50%",transform:"translateX(-50%)",width:600,height:300,background:"radial-gradient(ellipse,rgba(59,130,246,.25) 0%,transparent 70%)",pointerEvents:"none"}}/>
+      <div style={{position:"relative",maxWidth:720,margin:"0 auto"}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(59,130,246,.15)",border:"1px solid rgba(59,130,246,.35)",borderRadius:30,padding:"6px 18px",fontSize:13,color:"#93C5FD",marginBottom:24,fontWeight:500}}>
+          <span style={{width:7,height:7,background:"#3B82F6",borderRadius:"50%",display:"inline-block",boxShadow:"0 0 8px #3B82F6"}}/>
+          {prods.length>0?`${prods.length}+ bản vẽ AutoCAD chất lượng cao`:"Thư viện bản vẽ AutoCAD chuyên nghiệp"}
+        </div>
+        <h1 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:46,fontWeight:900,color:"#fff",lineHeight:1.15,marginBottom:16,letterSpacing:"-0.02em"}}>
+          Kho Bản Vẽ<br/>
+          <span style={{background:"linear-gradient(90deg,#60A5FA,#93C5FD)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>AutoCAD 2D Việt Nam</span>
+        </h1>
+        <p style={{fontSize:16,color:"#94A3B8",lineHeight:1.75,maxWidth:520,margin:"0 auto 36px"}}>
+          Kiến trúc · Cơ khí · Lazer CNC · Đồ án · Thi công xây dựng<br/>
+          <span style={{color:"#60A5FA",fontWeight:500}}>File DWG gốc · Tải ngay sau thanh toán · Hỗ trợ 24/7</span>
+        </p>
+        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",marginBottom:48}}>
+          <button className="kbv-btn" onClick={()=>go("shop")} style={{background:"#2563EB",color:"#fff",border:"none",borderRadius:12,padding:"14px 32px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 4px 24px rgba(37,99,235,.5)"}}>Khám Phá Kho Bản Vẽ →</button>
+          <button className="kbv-btn" onClick={()=>go("shop")} style={{background:"rgba(255,255,255,.08)",color:"#fff",border:"1px solid rgba(255,255,255,.2)",borderRadius:12,padding:"14px 28px",fontSize:15,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>📥 Tải Miễn Phí</button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",borderRadius:16,overflow:"hidden",maxWidth:640,margin:"0 auto"}}>
+          {[[prods.length>0?`${prods.length}+`:"500+","Bản Vẽ","📐"],["12,000+","Lượt Tải","📥"],[Object.keys(countByCat).length||"6","Danh Mục","🗂️"],["4.8★","Đánh Giá","⭐"]].map(([n,l,ic],i)=>(
+            <div key={i} style={{padding:"20px 10px",textAlign:"center",borderRight:i<3?"1px solid rgba(255,255,255,.08)":"none"}}>
+              <div style={{fontSize:11,marginBottom:4}}>{ic}</div>
+              <div style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:22,fontWeight:800,color:"#60A5FA"}}>{n}</div>
+              <div style={{fontSize:11,color:"#64748B",fontWeight:500}}>{l}</div>
+            </div>
+          ))}
         </div>
       </div>
-      <div style={{maxWidth:760,margin:"40px auto 0",display:"flex",background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",borderRadius:16,overflow:"hidden"}}>
-        {[["500+","Bản Vẽ"],["12,000+","Lượt Tải"],["6","Danh Mục"],["4.8★","Đánh Giá TB"]].map(([n,l],i)=>(
-          <div key={i} style={{flex:1,padding:"18px 12px",textAlign:"center",borderRight:i<3?"1px solid rgba(255,255,255,.12)":"none"}}>
-            <div style={{fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,color:"#60A5FA"}}>{n}</div>
-            <div style={{fontSize:11.5,color:"#94A3B8",marginTop:2,fontWeight:500}}>{l}</div>
-          </div>
-        ))}
+    </div>
+
+    {/* DANH MỤC */}
+    <div style={{maxWidth:1200,margin:"0 auto",padding:"52px 20px 32px"}}>
+      <h2 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:26,fontWeight:800,color:"#0F172A",marginBottom:6}}>Danh Mục Bản Vẽ</h2>
+      <p style={{color:"#64748B",fontSize:14.5,marginBottom:24}}>Tất cả danh mục — từ kiến trúc đến cơ khí và lazer CNC</p>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:14}}>
+        {CATS.map(cat=>{
+          const cnt=countByCat[cat.id]||0;
+          return(<div key={cat.id} className="kbv-catbtn" onClick={()=>go("shop")}
+            style={{background:"#fff",borderRadius:16,padding:"22px 16px",textAlign:"center",
+              boxShadow:"0 1px 3px rgba(15,23,42,.08),0 4px 12px rgba(15,23,42,.04)",
+              border:`1.5px solid ${cat.bg}`,cursor:"pointer",position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:-20,right:-20,width:80,height:80,background:cat.bg,borderRadius:"50%",opacity:.6}}/>
+            <div style={{fontSize:32,marginBottom:10,position:"relative"}}>{cat.emoji}</div>
+            <div style={{fontWeight:700,fontSize:13.5,color:"#0F172A",marginBottom:5,lineHeight:1.3,position:"relative"}}>{cat.label}</div>
+            <div style={{fontSize:12,color:cat.color,fontWeight:600,position:"relative"}}>
+              {cnt>0?`${cnt} bản vẽ`:"Đang cập nhật"}
+            </div>
+          </div>);
+        })}
       </div>
     </div>
-    <div style={{maxWidth:1200,margin:"0 auto",padding:"50px 20px 20px"}}>
-      <h2 style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,color:"#0F172A",marginBottom:6}}>Danh Mục Bản Vẽ</h2>
-      <p style={{color:"#64748B",marginBottom:28,fontSize:14}}>Chọn danh mục phù hợp với nhu cầu của bạn</p>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:14}}>
-        {CATS.map(c=>(
-          <div key={c.id} className="kbv-catbtn" onClick={()=>go("shop")} style={{background:"#fff",borderRadius:14,padding:"20px 16px",textAlign:"center",boxShadow:"0 2px 8px rgba(15,23,42,.07)",border:`2px solid ${c.bg}`}}>
-            <div style={{fontSize:30,marginBottom:8}}>{c.emoji}</div>
-            <div style={{fontWeight:700,fontSize:13,color:"#0F172A",marginBottom:4}}>{c.label}</div>
-            <div style={{fontSize:11.5,color:c.color,fontWeight:600}}>{c.count} bản vẽ</div>
-          </div>
-        ))}
-      </div>
-    </div>
-    <div style={{maxWidth:1200,margin:"0 auto",padding:"30px 20px"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:20}}>
-        <div><h2 style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,color:"#0F172A",marginBottom:4}}>🔥 Bán Chạy Nhất</h2><p style={{color:"#64748B",fontSize:14}}>Được tải nhiều nhất tuần này</p></div>
-        <button onClick={()=>go("shop")} style={{background:"none",border:"1.5px solid #2563EB",color:"#2563EB",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Xem tất cả →</button>
+
+    {/* BÁN CHẠY */}
+    {featured.length>0&&(<div style={{maxWidth:1200,margin:"0 auto",padding:"8px 20px 36px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div><h2 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:24,fontWeight:800,color:"#0F172A",marginBottom:4}}>🔥 Bán Chạy Nhất</h2><p style={{color:"#64748B",fontSize:14}}>Được tải nhiều nhất trong tuần</p></div>
+        <button onClick={()=>go("shop")} style={{background:"none",border:"1.5px solid #E2E8F0",color:"#475569",borderRadius:10,padding:"9px 20px",fontSize:13.5,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Xem tất cả →</button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:18}}>
-        {featured.map(p=><ProductCard key={p.id} p={p} onOpen={prod=>go("detail",prod)}/>)}
+        {featured.map(p=><ProductCard key={p.id||p._id} p={p} onOpen={prod=>go("detail",prod)}/>)}
       </div>
-    </div>
-    <div style={{background:"#F0FDF4",padding:"40px 20px"}}>
+    </div>)}
+
+    {/* MỚI NHẤT */}
+    {newest.length>0&&(<div style={{background:"#fff",padding:"40px 20px"}}>
       <div style={{maxWidth:1200,margin:"0 auto"}}>
-        <h2 style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,color:"#0F172A",marginBottom:6}}>📥 Bản Vẽ Miễn Phí</h2>
-        <p style={{color:"#64748B",fontSize:14,marginBottom:24}}>Tải ngay, không cần thanh toán</p>
+        <h2 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:24,fontWeight:800,color:"#0F172A",marginBottom:4}}>✨ Mới Nhất</h2>
+        <p style={{color:"#64748B",fontSize:14,marginBottom:20}}>Vừa được thêm vào kho</p>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:18}}>
-          {free.map(p=><ProductCard key={p.id} p={p} onOpen={prod=>go("detail",prod)}/>)}
+          {newest.map(p=><ProductCard key={p.id||p._id} p={p} onOpen={prod=>go("detail",prod)}/>)}
         </div>
       </div>
-    </div>
-    <footer style={{background:"#0F172A",color:"#94A3B8",padding:"36px 20px",textAlign:"center"}}>
-      <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#fff",marginBottom:8}}>KhoBanVe<span style={{color:"#3B82F6"}}>2D</span></div>
-      <p style={{fontSize:13}}>Thư viện bản vẽ AutoCAD chuyên nghiệp • khobanve2d@gmail.com</p>
-      <p style={{fontSize:12,marginTop:8,color:"#475569"}}>© 2025 KhoBanVe2D</p>
+    </div>)}
+
+    {/* MIỄN PHÍ */}
+    {free.length>0&&(<div style={{background:"linear-gradient(135deg,#F0FDF4,#ECFDF5)",padding:"40px 20px"}}>
+      <div style={{maxWidth:1200,margin:"0 auto"}}>
+        <h2 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:24,fontWeight:800,color:"#0F172A",marginBottom:4}}>📥 Tải Miễn Phí</h2>
+        <p style={{color:"#64748B",fontSize:14,marginBottom:20}}>Không cần thanh toán — tải ngay</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:18}}>
+          {free.map(p=><ProductCard key={p.id||p._id} p={p} onOpen={prod=>go("detail",prod)}/>)}
+        </div>
+      </div>
+    </div>)}
+
+    {prods.length===0&&(<div style={{maxWidth:1200,margin:"0 auto",padding:"60px 20px",textAlign:"center"}}>
+      <div style={{fontSize:56,marginBottom:16}}>📐</div>
+      <h3 style={{fontSize:20,fontWeight:700,color:"#0F172A",marginBottom:8}}>Kho bản vẽ đang được cập nhật</h3>
+      <p style={{color:"#64748B",fontSize:14}}>Admin đang thêm sản phẩm vào hệ thống</p>
+    </div>)}
+
+    {/* FOOTER */}
+    <footer style={{background:"#0A1628",color:"#94A3B8",padding:"44px 20px 28px"}}>
+      <div style={{maxWidth:1200,margin:"0 auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:32,marginBottom:28}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+              <div style={{width:36,height:36,background:"linear-gradient(135deg,#2563EB,#3B82F6)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📐</div>
+              <div>
+                <div style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:17,fontWeight:800,color:"#fff"}}>KhoBanVe<span style={{color:"#3B82F6"}}>2D</span></div>
+                <div style={{fontSize:10.5,color:"#475569",letterSpacing:.5}}>THƯ VIỆN BẢN VẼ AUTOCAD</div>
+              </div>
+            </div>
+            <p style={{fontSize:13,lineHeight:1.8,maxWidth:280}}>Nền tảng mua bán bản vẽ AutoCAD chuyên nghiệp tại Việt Nam. Tải ngay sau thanh toán.</p>
+          </div>
+          <div style={{display:"flex",gap:40,flexWrap:"wrap"}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:"#fff",marginBottom:10}}>Danh mục</div>
+              {CATS.map(cat=><div key={cat.id} style={{fontSize:12.5,marginBottom:7,cursor:"pointer",color:"#94A3B8"}} onClick={()=>go("shop")}>{cat.emoji} {cat.label}</div>)}
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:"#fff",marginBottom:10}}>Liên hệ</div>
+              <div style={{fontSize:12.5,marginBottom:7}}>📧 khobanve2d@gmail.com</div>
+              <div style={{fontSize:12.5,marginBottom:7}}>🏦 VPBank · 0913331916</div>
+              <div style={{fontSize:12.5}}>👤 Nguyễn Việt Long</div>
+            </div>
+          </div>
+        </div>
+        <div style={{borderTop:"1px solid rgba(255,255,255,.07)",paddingTop:18,display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+          <p style={{fontSize:12}}>© 2025 KhoBanVe2D — Bản quyền thuộc về Nguyễn Việt Long</p>
+          <p style={{fontSize:12}}>Thanh toán bảo mật · File DWG gốc · Hỗ trợ 24/7</p>
+        </div>
+      </div>
     </footer>
   </div>);
 }
+
 
 function ShopPage({go,catFilter,setCatFilter,query,setQuery,prods=PRODS}){
   const [pf,setPf]=useState("all");
@@ -246,7 +349,7 @@ function DetailPage({prod,go,buy,prods=[]}){
           {prod.free&&<Badge label="MIỄN PHÍ" color="#fff" bg="#059669"/>}
           {prod.isNew&&<Badge label="MỚI" color="#fff" bg="#2563EB"/>}
         </div>
-        <h1 style={{fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,color:"#0F172A",lineHeight:1.4,marginBottom:14}}>{prod.title}</h1>
+        <h1 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:22,fontWeight:800,color:"#0F172A",lineHeight:1.4,marginBottom:14}}>{prod.title}</h1>
         <div style={{marginBottom:16}}><Stars r={prod.rate}/><span style={{fontSize:12,color:"#94A3B8",marginLeft:8}}>{prod.rev} đánh giá</span></div>
         <div style={{background:"#F8FAFC",borderRadius:12,padding:"14px 16px",marginBottom:20,border:"1px solid #E2E8F0"}}>
           <div style={{fontSize:13.5,color:"#334155",lineHeight:1.7}}>{prod.desc}</div>
@@ -269,7 +372,7 @@ function DetailPage({prod,go,buy,prods=[]}){
               }} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>📥 Tải File Ngay (Miễn Phí)</button></>
           ):(
             <><div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:6}}>
-              <span style={{fontSize:32,fontWeight:800,color:"#1D4ED8",fontFamily:"'Syne',sans-serif"}}>{vnd(prod.price)}</span>
+              <span style={{fontSize:32,fontWeight:800,color:"#1D4ED8",fontFamily:"'Be Vietnam Pro',sans-serif"}}>{vnd(prod.price)}</span>
               {prod.oldPrice&&<span style={{fontSize:16,color:"#94A3B8",textDecoration:"line-through"}}>{vnd(prod.oldPrice)}</span>}
             </div>
             {prod.oldPrice&&<div style={{fontSize:12.5,color:"#059669",fontWeight:600,marginBottom:14}}>💰 Tiết kiệm {vnd(prod.oldPrice-prod.price)} ({Math.round((1-prod.price/prod.oldPrice)*100)}% giảm)</div>}
@@ -280,7 +383,7 @@ function DetailPage({prod,go,buy,prods=[]}){
       </div>
     </div>
     {related.length>0&&(<div style={{marginTop:48}}>
-      <h2 style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#0F172A",marginBottom:18}}>Bản Vẽ Liên Quan</h2>
+      <h2 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:20,fontWeight:800,color:"#0F172A",marginBottom:18}}>Bản Vẽ Liên Quan</h2>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:18}}>
         {related.map(p=><ProductCard key={p.id} p={p} onOpen={rp=>go("detail",rp)}/>)}
       </div>
@@ -330,7 +433,7 @@ function PayPage({order,payState,setPayState,go}){
     <div className="kbv-fadeup" style={{background:"#fff",borderRadius:20,overflow:"hidden",boxShadow:"0 8px 40px rgba(15,23,42,.14)"}}>
       <div style={{background:"linear-gradient(135deg,#0F172A,#1E3A8A)",padding:"22px 28px",color:"#fff"}}>
         <div style={{fontSize:12,color:"#93C5FD",fontWeight:600,marginBottom:4}}>THANH TOÁN ĐƠN HÀNG</div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:800,lineHeight:1.4}}>{prod.title}</div>
+        <div style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:16,fontWeight:800,lineHeight:1.4}}>{prod.title}</div>
         <div style={{display:"flex",justifyContent:"space-between",marginTop:10}}>
           <span style={{fontSize:12,color:"#94A3B8"}}>Mã đơn: <b style={{color:"#60A5FA"}}>{id}</b></span>
           <span style={{fontSize:14,color:"#94A3B8"}}>⏱ <b style={{color:"#FCD34D"}}>{mins}:{secs}</b></span>
@@ -340,7 +443,7 @@ function PayPage({order,payState,setPayState,go}){
         {payState==="success"?(
           <div className="kbv-fadeup" style={{padding:"30px 0"}}>
             <div style={{fontSize:60,marginBottom:10}}>✅</div>
-            <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#059669"}}>Thanh toán thành công!</div>
+            <div style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:20,fontWeight:800,color:"#059669"}}>Thanh toán thành công!</div>
             <div style={{fontSize:13,color:"#64748B",marginTop:6}}>Đang chuyển đến trang tải xuống…</div>
           </div>
         ):(
@@ -411,7 +514,7 @@ function SuccessPage({order,go}){
   return(<div style={{maxWidth:540,margin:"60px auto",padding:"0 20px",textAlign:"center"}}>
     <div className="kbv-fadeup" style={{background:"#fff",borderRadius:20,padding:"48px 32px",boxShadow:"0 8px 40px rgba(15,23,42,.14)"}}>
       <div style={{fontSize:72,marginBottom:16}}>🎉</div>
-      <div style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,color:"#059669",marginBottom:8}}>Thanh Toán Thành Công!</div>
+      <div style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:26,fontWeight:800,color:"#059669",marginBottom:8}}>Thanh Toán Thành Công!</div>
       <div style={{fontSize:15,color:"#64748B",marginBottom:24,lineHeight:1.7}}>Cảm ơn bạn đã mua bản vẽ.<br/>Đang tạo link tải bảo mật — chỉ dùng được 1 lần.</div>
       <div style={{background:"#F0FDF4",borderRadius:14,padding:"18px 22px",marginBottom:24,border:"1px solid #BBF7D0"}}>
         <div style={{fontSize:13,color:"#64748B",marginBottom:8}}>📦 Đơn hàng</div>
@@ -514,7 +617,7 @@ function AdminLoginPage({ onLogin }) {
       <div style={{background:"#fff",borderRadius:20,padding:"48px 40px",maxWidth:400,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,.3)"}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontSize:48,marginBottom:8}}>🔐</div>
-          <h1 style={{fontFamily:"'Syne',sans-serif",fontSize:24,fontWeight:800,color:"#0F172A"}}>Admin KhoBanVe2D</h1>
+          <h1 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:24,fontWeight:800,color:"#0F172A"}}>Admin KhoBanVe2D</h1>
           <p style={{fontSize:13,color:"#64748B",marginTop:6}}>Đăng nhập để quản lý bản vẽ</p>
         </div>
         <input value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}
@@ -595,7 +698,7 @@ function ProductModal({ prod, onClose, onSave, token }) {
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:640,maxHeight:"90vh",overflow:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.3)"}}>
         <div style={{padding:"20px 24px",borderBottom:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:"#fff",zIndex:1}}>
-          <h2 style={{fontFamily:"'Syne',sans-serif",fontSize:18,fontWeight:800,color:"#0F172A"}}>{isEdit?"✏️ Sửa Bản Vẽ":"➕ Thêm Bản Vẽ Mới"}</h2>
+          <h2 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:18,fontWeight:800,color:"#0F172A"}}>{isEdit?"✏️ Sửa Bản Vẽ":"➕ Thêm Bản Vẽ Mới"}</h2>
           <button onClick={onClose} style={{background:"#F1F5F9",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:13}}>✕ Đóng</button>
         </div>
         <div style={{padding:"20px 24px"}}>
@@ -730,7 +833,7 @@ function AdminDashboard({ token, onLogout }) {
       <header style={{background:"#0F172A",padding:"0 24px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{width:32,height:32,background:"linear-gradient(135deg,#2563EB,#3B82F6)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>📐</div>
-          <span style={{fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:800,color:"#fff"}}>KhoBanVe2D <span style={{color:"#60A5FA",fontSize:12,fontWeight:400}}>Admin Panel</span></span>
+          <span style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:16,fontWeight:800,color:"#fff"}}>KhoBanVe2D <span style={{color:"#60A5FA",fontSize:12,fontWeight:400}}>Admin Panel</span></span>
         </div>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
           <a href="/" target="_blank" style={{color:"#94A3B8",fontSize:13,textDecoration:"none"}}>🌐 Xem website</a>
@@ -744,7 +847,7 @@ function AdminDashboard({ token, onLogout }) {
           {[["📦","Tổng bản vẽ",prods.length],["✅","Đang hiện",prods.filter(p=>p.isActive).length],["🆓","Miễn phí",prods.filter(p=>p.isFree).length],["💰","Có phí",prods.filter(p=>!p.isFree).length]].map(([ic,l,v])=>(
             <div key={l} style={{background:"#fff",borderRadius:12,padding:"16px 18px",boxShadow:"0 1px 4px rgba(15,23,42,.07)"}}>
               <div style={{fontSize:24,marginBottom:4}}>{ic}</div>
-              <div style={{fontSize:22,fontWeight:800,color:"#0F172A",fontFamily:"'Syne',sans-serif"}}>{v}</div>
+              <div style={{fontSize:22,fontWeight:800,color:"#0F172A",fontFamily:"'Be Vietnam Pro',sans-serif"}}>{v}</div>
               <div style={{fontSize:12,color:"#64748B"}}>{l}</div>
             </div>
           ))}
@@ -862,7 +965,7 @@ function App(){
   const go=useCallback((p,data=null)=>{if(data)setProd(data);setPage(p);window.scrollTo(0,0);},[]);
   const buy=useCallback((p)=>{const oid=genOid();setOrder({id:oid,prod:p});setPayState("waiting");setPage("pay");window.scrollTo(0,0);},[]);
   const shared={go,buy,catFilter,setCatFilter,query,setQuery,prod,order,payState,setPayState,prods};
-  return(<div style={{fontFamily:"'Plus Jakarta Sans',sans-serif",background:"#F1F5F9",minHeight:"100vh",color:"#0F172A"}}>
+  return(<div style={{fontFamily:"'Be Vietnam Pro',sans-serif",background:"#F1F5F9",minHeight:"100vh",color:"#0F172A"}}>
     <Header page={page} go={go} query={query} setQuery={setQuery}/>
     {page==="home"&&<HomePage {...shared}/>}
     {page==="shop"&&<ShopPage {...shared}/>}
