@@ -680,11 +680,11 @@ function SuccessPage({order,go}){
           // Mức 3: one-time token → /api/download?token=xxx
           const tokenUrl=`/api/download?token=${data.token}`;
           setDlUrl(tokenUrl);
-          setTimeout(()=>window.open(tokenUrl,"_blank"),2500);
+          setTimeout(()=>{window.location.href=tokenUrl;},2500);
         } else if(data.url){
           // Fallback mức 2 (KV chưa cấu hình)
           setDlUrl(data.url);
-          setTimeout(()=>window.open(data.url,"_blank"),2500);
+          setTimeout(()=>{window.location.href=data.url;},2500);
         } else {
           setDlError("Không lấy được link tải. Liên hệ khobanve2d@gmail.com");
         }
@@ -720,7 +720,7 @@ function SuccessPage({order,go}){
             </div>
            </div>
           :dlUrl
-            ?<button className="kbv-btn" onClick={()=>window.open(dlUrl,"_blank")} style={{width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>📥 Tải File Ngay</button>
+            ?<a href={dlUrl} style={{display:"block",width:"100%",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",textDecoration:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:700,textAlign:"center",marginBottom:10,boxSizing:"border-box"}}>📥 Tải File Ngay</a>
             :<div style={{textAlign:"center",padding:"12px",color:"#EF4444",fontSize:13}}>⚠️ Không lấy được link — liên hệ khobanve2d@gmail.com</div>
       }
       <button onClick={()=>go("home")} style={{width:"100%",background:"none",border:"1.5px solid #E2E8F0",color:"#64748B",borderRadius:12,padding:"13px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>← Về Trang Chủ</button>
