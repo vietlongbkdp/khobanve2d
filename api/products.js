@@ -48,9 +48,13 @@ module.exports = async function handler(req, res) {
         const p = await col.findOne({ _id: new ObjectId(id) });
         return res.status(p ? 200 : 404).json(p || { error: "Not found" });
       }
-      const filter = admin && verifyAdmin(req) ? {} : { isActive: true };
-      const prods  = await col.find(filter).sort({ createdAt: -1 }).toArray();
-      return res.status(200).json(prods);
+      const isAdmin = admin && verifyAdmin(req);
+      const filter  = isAdmin ? {} : { isActive: true };
+      const prods   = await col.find(filter).sort({ createdAt: -1 }).toArray();
+
+      // Ẩn field nhạy cảm với user thường
+      const result = isAdmin ? prods : prods.map(({ driveFileId, updatedAt, viewCount, ...safe }) => safe);
+      return res.status(200).json(result);
     }
 
     if (!verifyAdmin(req)) return res.status(401).json({ error: "Unauthorized" });
