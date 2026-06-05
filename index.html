@@ -1099,43 +1099,88 @@ function BatchUploadTab({token}){
     setStep(1);
   };
 
-  // Dịch tên tất cả files
+  // Lấy OpenRouter key từ server (1 lần)
+  const [orKey,setOrKey] = useState("");
+  useEffect(()=>{
+    fetch("/api/admin/config",{headers:{"Authorization":`Bearer ${token}`}})
+      .then(r=>r.json()).then(d=>{ if(d.openrouterKey) setOrKey(d.openrouterKey); })
+      .catch(()=>{});
+  },[]);
+
+  // Dịch 1 file trực tiếp từ browser → OpenRouter (bypass Vercel IP)
+  const translateOne = async (filename, category, apiKey) => {
+    const cleanName = filename
+      .replace(/\.(zip|rar|7z|dwg|dxf|pdf|skp|exe)$/i,"")
+      .replace(/[_\-\.]+/g," ")
+      .replace(/free\s*download/gi,"")
+      .replace(/cad/gi,"")
+      .replace(/\s+/g," ").trim();
+
+    const MODELS = [
+      "deepseek/deepseek-chat:free",
+      "qwen/qwen-2.5-7b-instruct:free",
+      "google/gemma-2-9b-it:free",
+    ];
+
+    for(const model of MODELS){
+      try{
+        const r = await fetch("https://openrouter.ai/api/v1/chat/completions",{
+          method:"POST",
+          headers:{
+            "Authorization":`Bearer ${apiKey}`,
+            "Content-Type":"application/json",
+            "HTTP-Referer":"https://khobanve2d.vercel.app",
+            "X-Title":"KhoBanVe2D",
+          },
+          body: JSON.stringify({
+            model,
+            messages:[
+              {role:"system",content:"Bạn là chuyên gia dịch thuật. Chỉ trả lời bằng tiếng Việt có dấu."},
+              {role:"user",content:`Dịch sang tiếng Việt ngắn gọn (5-8 từ): "${cleanName}"
+
+Chỉ trả về bản dịch tiếng Việt, không giải thích.`},
+            ],
+            max_tokens:80,
+            temperature:0.1,
+          }),
+        });
+        const d = await r.json();
+        const text = d.choices?.[0]?.message?.content?.trim()
+          ?.replace(/^["'`*#\-]|["'`*]$/g,"")?.trim();
+        if(text && /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(text)){
+          return text;
+        }
+      }catch(e){ console.log("model failed:",model,e.message); }
+    }
+    // Fallback
+    return cleanName.charAt(0).toUpperCase()+cleanName.slice(1);
+  };
+
+  // Dịch tất cả files
   const translateAll = async () => {
     if(!files.length) return alert("Chưa chọn file!");
+    if(!orKey) return alert("Chưa cấu hình OPENROUTER_API_KEY trong Vercel!");
     setTranslating(true);
     setStep(2);
     const newRows = files.map(f=>({
-      file:        f,
-      filename:    f.name,
-      title:       "",
-      translating: true,
-      category,
-      price:       defaultPrice,
-      fileType:    f.name.split(".").pop().toUpperCase(),
-      fileSize:    formatBytes(f.size),
-      driveFileId: "",
-      error:       null,
+      file:f, filename:f.name, title:"", translating:true,
+      category, price:defaultPrice,
+      fileType:f.name.split(".").pop().toUpperCase(),
+      fileSize:formatBytes(f.size),
+      driveFileId:"", error:null,
     }));
-    setRows(newRows);
+    setRows([...newRows]);
 
-    // Dịch song song (tối đa 3 cùng lúc)
-    for(let i=0; i<newRows.length; i+=3){
-      const batch = newRows.slice(i, i+3);
-      await Promise.all(batch.map(async(row,j)=>{
-        try{
-          const r=await fetch("/api/admin/translate",{
-            method:"POST",
-            headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
-            body:JSON.stringify({filename:row.filename, category:row.category})
-          });
-          const d=await r.json();
-          newRows[i+j].title=d.title||row.filename;
-        }catch{
-          newRows[i+j].title=row.filename.replace(/\.[^.]+$/,"").replace(/[_-]/g," ");
-        }
-        newRows[i+j].translating=false;
-        setRows([...newRows]);
-      }));
+    // Dịch từng file (không song song để tránh rate limit)
+    for(let i=0; i<newRows.length; i++){
+      try{
+        newRows[i].title = await translateOne(newRows[i].filename, newRows[i].category, orKey);
+      }catch{
+        newRows[i].title = newRows[i].filename.replace(/\.[^.]+$/,"").replace(/[_-]/g," ");
+      }
+      newRows[i].translating = false;
+      setRows([...newRows]);
+      if(i<newRows.length-1) await new Promise(r=>setTimeout(r,500));
     }
     setTranslating(false);
   };
