@@ -1108,75 +1108,29 @@ function BatchUploadTab({token}){
   },[]);
 
   // Dịch 1 file trực tiếp từ browser → OpenRouter (bypass Vercel IP)
-  const translateOne = async (filename, category, apiKey) => {
+  // Dịch dùng Google Translate (miễn phí, không cần API key)
+  const translateOne = async (filename) => {
     const cleanName = filename
       .replace(/\.(zip|rar|7z|dwg|dxf|pdf|skp|exe)$/i,"")
       .replace(/[_\-\.]+/g," ")
-      .replace(/free\s*download/gi,"")
-      .replace(/cad/gi,"")
+      .replace(/\bfree\s*download\b/gi,"")
+      .replace(/\bcad\b/gi,"")
+      .replace(/\bfile\b/gi,"")
       .replace(/\s+/g," ").trim();
-
-    const MODELS = [
-      "meta-llama/llama-3.2-3b-instruct:free",
-      "meta-llama/llama-3.1-8b-instruct:free",
-      "google/gemma-2-9b-it:free",
-      "mistralai/mistral-7b-instruct:free",
-      "qwen/qwen-2-7b-instruct:free",
-    ];
-
-    for(const model of MODELS){
-      try{
-        const r = await fetch("https://openrouter.ai/api/v1/chat/completions",{
-          method:"POST",
-          headers:{
-            "Authorization":`Bearer ${apiKey}`,
-            "Content-Type":"application/json",
-            "HTTP-Referer":"https://khobanve2d.vercel.app",
-            "X-Title":"KhoBanVe2D",
-          },
-          body: JSON.stringify({
-            model,
-            messages:[
-              {role:"system",content:"Bạn là chuyên gia dịch thuật. Chỉ trả lời bằng tiếng Việt có dấu."},
-              {role:"user",content:`Dịch sang tiếng Việt ngắn gọn (5-8 từ): "${cleanName}"
-
-Chỉ trả về bản dịch tiếng Việt, không giải thích.`},
-            ],
-            max_tokens:80,
-            temperature:0.1,
-          }),
-        });
-        const d = await r.json();
-        const text = d.choices?.[0]?.message?.content?.trim()
-          ?.replace(/^["'`*#\-]|["'`*]$/g,"")?.trim();
-        if(text && /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(text)){
-          return text;
-        }
-      }catch(e){ console.log("model failed:",model,e.message); }
-    }
-    // Fallback
+    try{
+      const url="https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q="+encodeURIComponent(cleanName);
+      const r=await fetch(url);
+      const d=await r.json();
+      const text=d[0]?.map(x=>x[0]).filter(Boolean).join("")||"";
+      if(text.trim()) return text.trim();
+    }catch(e){ console.log("[translate]",e.message); }
     return cleanName.charAt(0).toUpperCase()+cleanName.slice(1);
   };
-
-  // Dịch tất cả files
-  const translateAll = async () => {
-    if(!files.length) return alert("Chưa chọn file!");
-    if(!orKey) return alert("Chưa cấu hình OPENROUTER_API_KEY trong Vercel!");
-    setTranslating(true);
-    setStep(2);
-    const newRows = files.map(f=>({
-      file:f, filename:f.name, title:"", translating:true,
-      category, price:defaultPrice,
-      fileType:f.name.split(".").pop().toUpperCase(),
-      fileSize:formatBytes(f.size),
-      driveFileId:"", error:null,
-    }));
-    setRows([...newRows]);
 
     // Dịch từng file (không song song để tránh rate limit)
     for(let i=0; i<newRows.length; i++){
       try{
-        newRows[i].title = await translateOne(newRows[i].filename, newRows[i].category, orKey);
+        newRows[i].title = await translateOne(newRows[i].filename);
       }catch{
         newRows[i].title = newRows[i].filename.replace(/\.[^.]+$/,"").replace(/[_-]/g," ");
       }
