@@ -1080,6 +1080,287 @@ function ProductModal({ prod, onClose, onSave, token }) {
 }
 
 /* ── Admin Dashboard ── */
+
+/* ── Batch Upload Tab ── */
+function BatchUploadTab({token}){
+  const [files,setFiles]         = useState([]);
+  const [category,setCategory]   = useState("kien-truc");
+  const [defaultPrice,setDefaultPrice] = useState(0);
+  const [rows,setRows]           = useState([]);
+  const [translating,setTranslating] = useState(false);
+  const [creating,setCreating]   = useState(false);
+  const [done,setDone]           = useState([]);
+  const [step,setStep]           = useState(1); // 1=chọn file, 2=xem trước, 3=xong
+
+  const onFilesChange = e => {
+    const f = Array.from(e.target.files);
+    setFiles(f);
+    setRows([]);
+    setStep(1);
+  };
+
+  // Dịch tên tất cả files
+  const translateAll = async () => {
+    if(!files.length) return alert("Chưa chọn file!");
+    setTranslating(true);
+    setStep(2);
+    const newRows = files.map(f=>({
+      file:        f,
+      filename:    f.name,
+      title:       "",
+      translating: true,
+      category,
+      price:       defaultPrice,
+      fileType:    f.name.split(".").pop().toUpperCase(),
+      fileSize:    formatBytes(f.size),
+      driveFileId: "",
+      error:       null,
+    }));
+    setRows(newRows);
+
+    // Dịch song song (tối đa 3 cùng lúc)
+    for(let i=0; i<newRows.length; i+=3){
+      const batch = newRows.slice(i, i+3);
+      await Promise.all(batch.map(async(row,j)=>{
+        try{
+          const r=await fetch("/api/admin/translate",{
+            method:"POST",
+            headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+            body:JSON.stringify({filename:row.filename, category:row.category})
+          });
+          const d=await r.json();
+          newRows[i+j].title=d.title||row.filename;
+        }catch{
+          newRows[i+j].title=row.filename.replace(/\.[^.]+$/,"").replace(/[_-]/g," ");
+        }
+        newRows[i+j].translating=false;
+        setRows([...newRows]);
+      }));
+    }
+    setTranslating(false);
+  };
+
+  const updateRow=(idx,field,val)=>{
+    const updated=[...rows];
+    updated[idx]={...updated[idx],[field]:val};
+    setRows(updated);
+  };
+
+  const removeRow=(idx)=>setRows(rows.filter((_,i)=>i!==idx));
+
+  // Tạo tất cả sản phẩm
+  const createAll = async () => {
+    if(!rows.length) return;
+    setCreating(true);
+    const results=[];
+    for(const row of rows){
+      try{
+        const r=await fetch("/api/products",{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+          body:JSON.stringify({
+            title:       row.title,
+            category:    row.category,
+            fileType:    row.fileType,
+            fileSize:    row.fileSize,
+            fileCount:   1,
+            price:       Number(row.price)||0,
+            driveFileId: row.driveFileId||"",
+            isActive:    false,
+            isNew:       true,
+            downloadCount:0,
+            rating:5,
+          })
+        });
+        const d=await r.json();
+        results.push({title:row.title, ok:r.ok, id:d._id, error:d.error});
+      }catch(e){
+        results.push({title:row.title, ok:false, error:e.message});
+      }
+    }
+    setDone(results);
+    setCreating(false);
+    setStep(3);
+  };
+
+  const formatBytes=b=>{
+    if(b<1024) return b+"B";
+    if(b<1024*1024) return (b/1024).toFixed(0)+"kB";
+    return (b/(1024*1024)).toFixed(1)+"MB";
+  };
+
+  const INP = (style={}) => ({
+    border:"1.5px solid #E2E8F0",borderRadius:6,padding:"4px 8px",
+    fontSize:12,fontFamily:"inherit",outline:"none",background:"#fff",...style
+  });
+
+  return(<div>
+    {/* STEP 1: Chọn file */}
+    <div style={{background:"#fff",borderRadius:14,padding:24,boxShadow:"0 1px 4px rgba(15,23,42,.07)",marginBottom:16}}>
+      <h3 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:16,fontWeight:800,color:"#0F172A",marginBottom:16}}>
+        📤 Bước 1 — Chọn File & Danh Mục
+      </h3>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:16}}>
+        <div>
+          <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5}}>
+            📁 Chọn nhiều file
+          </label>
+          <input type="file" multiple accept=".zip,.rar,.7z,.dwg,.dxf,.pdf,.skp"
+            onChange={onFilesChange}
+            style={{width:"100%",fontSize:13,fontFamily:"inherit"}}/>
+          {files.length>0&&<div style={{fontSize:11,color:"#059669",marginTop:4}}>✅ Đã chọn {files.length} file</div>}
+        </div>
+        <div>
+          <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5}}>
+            🗂️ Danh mục mặc định
+          </label>
+          <select value={category} onChange={e=>setCategory(e.target.value)}
+            style={{...INP({width:"100%",height:36})}}>
+            {CATS.map(c=><option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5}}>
+            💰 Giá mặc định (đ)
+          </label>
+          <input type="number" value={defaultPrice} onChange={e=>setDefaultPrice(Number(e.target.value))}
+            placeholder="0 = miễn phí"
+            style={{...INP({width:"100%",height:36})}}/>
+        </div>
+      </div>
+
+      <button onClick={translateAll} disabled={!files.length||translating}
+        style={{background:!files.length?"#94A3B8":"linear-gradient(135deg,#7C3AED,#9333EA)",
+          color:"#fff",border:"none",borderRadius:10,padding:"11px 28px",
+          fontSize:14,fontWeight:700,cursor:files.length?"pointer":"not-allowed",fontFamily:"inherit"}}>
+        {translating?"⏳ Đang dịch...":"🤖 Dịch Tên & Xem Trước"}
+      </button>
+    </div>
+
+    {/* STEP 2: Bảng xem trước */}
+    {rows.length>0&&step===2&&(<div style={{background:"#fff",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(15,23,42,.07)",marginBottom:16}}>
+      <div style={{padding:"14px 20px",borderBottom:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <h3 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:15,fontWeight:800,color:"#0F172A"}}>
+          ✏️ Bước 2 — Xem Trước & Chỉnh Sửa ({rows.length} sản phẩm)
+        </h3>
+        <span style={{fontSize:12,color:"#94A3B8"}}>Có thể sửa tiêu đề, giá, danh mục trước khi tạo</span>
+      </div>
+      <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",minWidth:900}}>
+          <thead>
+            <tr style={{background:"#F8FAFC",borderBottom:"1px solid #E2E8F0"}}>
+              {["#","Tên File Gốc","Tiêu Đề Tiếng Việt (Claude dịch)","Danh Mục","Giá (đ)","Drive File ID",""].map(h=>(
+                <th key={h} style={{textAlign:"left",padding:"9px 12px",fontSize:11,fontWeight:700,
+                  color:"#64748B",textTransform:"uppercase",letterSpacing:.4,whiteSpace:"nowrap"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row,i)=>(
+              <tr key={i} style={{borderBottom:"1px solid #F1F5F9"}}>
+                <td style={{padding:"10px 12px",fontSize:12,color:"#94A3B8",fontWeight:700,width:30}}>{i+1}</td>
+                <td style={{padding:"10px 12px",maxWidth:180}}>
+                  <div style={{fontSize:12,color:"#64748B",fontFamily:"monospace",wordBreak:"break-all"}}>{row.filename}</div>
+                  <div style={{fontSize:11,color:"#94A3B8",marginTop:2}}>{row.fileSize}</div>
+                </td>
+                <td style={{padding:"10px 12px",minWidth:240}}>
+                  {row.translating
+                    ?<div style={{display:"flex",alignItems:"center",gap:6,color:"#7C3AED",fontSize:12}}>
+                      <span style={{display:"inline-block",width:12,height:12,border:"2px solid #7C3AED",
+                        borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+                      Đang dịch...
+                    </div>
+                    :<input value={row.title} onChange={e=>updateRow(i,"title",e.target.value)}
+                      style={{...INP({width:"100%"})}}/>
+                  }
+                </td>
+                <td style={{padding:"10px 12px",minWidth:140}}>
+                  <select value={row.category} onChange={e=>updateRow(i,"category",e.target.value)}
+                    style={{...INP({width:"100%"})}}>
+                    {CATS.map(c=><option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+                  </select>
+                </td>
+                <td style={{padding:"10px 12px",minWidth:110}}>
+                  <input type="number" value={row.price} onChange={e=>updateRow(i,"price",e.target.value)}
+                    style={{...INP({width:"100%"})}}/>
+                </td>
+                <td style={{padding:"10px 12px",minWidth:180}}>
+                  <input value={row.driveFileId} onChange={e=>updateRow(i,"driveFileId",e.target.value)}
+                    placeholder="Paste Drive File ID..."
+                    style={{...INP({width:"100%",fontFamily:"monospace",fontSize:11})}}/>
+                </td>
+                <td style={{padding:"10px 12px"}}>
+                  <button onClick={()=>removeRow(i)}
+                    style={{background:"#FEF2F2",color:"#EF4444",border:"none",borderRadius:6,
+                      padding:"4px 8px",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>🗑️</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{padding:"16px 20px",borderTop:"1px solid #E2E8F0",display:"flex",
+        justifyContent:"space-between",alignItems:"center",background:"#F8FAFC"}}>
+        <div style={{fontSize:12,color:"#64748B"}}>
+          💡 Sản phẩm sẽ được tạo ở trạng thái <b>Ẩn</b> — vào Admin bật lên sau khi review
+        </div>
+        <button onClick={createAll} disabled={creating||translating}
+          style={{background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",border:"none",
+            borderRadius:10,padding:"11px 28px",fontSize:14,fontWeight:700,
+            cursor:creating?"not-allowed":"pointer",fontFamily:"inherit",
+            boxShadow:"0 4px 14px rgba(5,150,105,.3)"}}>
+          {creating?<>
+            <span style={{display:"inline-block",width:14,height:14,border:"2px solid #fff",
+              borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite",
+              marginRight:8,verticalAlign:"middle"}}/>
+            Đang tạo...
+          </>:`➕ Tạo ${rows.length} Sản Phẩm`}
+        </button>
+      </div>
+    </div>)}
+
+    {/* STEP 3: Kết quả */}
+    {step===3&&done.length>0&&(<div style={{background:"#fff",borderRadius:14,padding:24,boxShadow:"0 1px 4px rgba(15,23,42,.07)"}}>
+      <h3 style={{fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:16,fontWeight:800,color:"#0F172A",marginBottom:16}}>
+        🎉 Kết Quả
+      </h3>
+      <div style={{display:"flex",gap:12,marginBottom:20}}>
+        <div style={{background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:10,padding:"12px 20px",textAlign:"center"}}>
+          <div style={{fontSize:22,fontWeight:800,color:"#059669"}}>{done.filter(d=>d.ok).length}</div>
+          <div style={{fontSize:12,color:"#64748B"}}>Tạo thành công</div>
+        </div>
+        {done.filter(d=>!d.ok).length>0&&(
+          <div style={{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:10,padding:"12px 20px",textAlign:"center"}}>
+            <div style={{fontSize:22,fontWeight:800,color:"#EF4444"}}>{done.filter(d=>!d.ok).length}</div>
+            <div style={{fontSize:12,color:"#64748B"}}>Thất bại</div>
+          </div>
+        )}
+      </div>
+      {done.map((d,i)=>(
+        <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",
+          borderBottom:"1px dashed #E2E8F0",fontSize:13}}>
+          <span>{d.ok?"✅":"❌"}</span>
+          <span style={{flex:1,color:d.ok?"#0F172A":"#EF4444"}}>{d.title}</span>
+          {!d.ok&&<span style={{color:"#EF4444",fontSize:11}}>{d.error}</span>}
+        </div>
+      ))}
+      <div style={{marginTop:20,padding:"14px 16px",background:"#FFFBEB",borderRadius:10,
+        border:"1px solid #FDE68A",fontSize:13,color:"#92400E",lineHeight:1.7}}>
+        <b>Bước tiếp theo:</b><br/>
+        1. Vào tab <b>Sản Phẩm</b> → tìm sản phẩm vừa tạo<br/>
+        2. Upload file lên <b>Google Drive</b> → copy File ID → Sửa sản phẩm điền vào<br/>
+        3. Thêm <b>ảnh preview</b> (chụp màn hình AutoCAD → upload Cloudinary)<br/>
+        4. Đặt <b>giá bán</b> → bật <b>Hiển thị</b>
+      </div>
+      <button onClick={()=>{setStep(1);setFiles([]);setRows([]);setDone([]);}}
+        style={{marginTop:16,background:"none",border:"1.5px solid #E2E8F0",color:"#475569",
+          borderRadius:10,padding:"10px 24px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+        ← Upload tiếp
+      </button>
+    </div>)}
+  </div>);
+}
+
 function AdminDashboard({ token, onLogout }) {
   const [tab, setTab]       = useState("products"); // products | revenue
   const [prods, setProds]   = useState([]);
@@ -1195,6 +1476,7 @@ function AdminDashboard({ token, onLogout }) {
         <div style={{background:"#F1F5F9",borderRadius:10,padding:4,display:"inline-flex",gap:2,marginBottom:20}}>
           {TAB_BTN("products","Sản Phẩm","📦")}
           {TAB_BTN("revenue","Doanh Thu & Lượt Tải","📊")}
+          {TAB_BTN("batch","Upload Hàng Loạt","📤")}
         </div>
 
         {/* ── TAB: SẢN PHẨM ── */}
@@ -1280,6 +1562,7 @@ function AdminDashboard({ token, onLogout }) {
         </>)}
 
         {/* ── TAB: DOANH THU ── */}
+        {tab==="batch"&&<BatchUploadTab token={token}/>}
         {tab==="revenue"&&(
           <div>
             {/* Top cards */}
