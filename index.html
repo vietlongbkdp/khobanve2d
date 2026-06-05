@@ -1127,18 +1127,21 @@ function BatchUploadTab({token}){
     return cleanName.charAt(0).toUpperCase()+cleanName.slice(1);
   };
 
-    // Dịch từng file (không song song để tránh rate limit)
-    for(let i=0; i<newRows.length; i++){
-      try{
-        newRows[i].title = await translateOne(newRows[i].filename);
-      }catch{
-        newRows[i].title = newRows[i].filename.replace(/\.[^.]+$/,"").replace(/[_-]/g," ");
+    // Dịch từng file
+    const runTranslations = async () => {
+      for(let i=0; i<newRows.length; i++){
+        try{
+          newRows[i].title = await translateOne(newRows[i].filename);
+        }catch{
+          newRows[i].title = newRows[i].filename.replace(/\.[^.]+$/,"").replace(/[_-]/g," ");
+        }
+        newRows[i].translating = false;
+        setRows([...newRows]);
+        if(i<newRows.length-1) await new Promise(r=>setTimeout(r,300));
       }
-      newRows[i].translating = false;
-      setRows([...newRows]);
-      if(i<newRows.length-1) await new Promise(r=>setTimeout(r,500));
-    }
-    setTranslating(false);
+      setTranslating(false);
+    };
+    runTranslations();
   };
 
   const updateRow=(idx,field,val)=>{
