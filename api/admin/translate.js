@@ -1,44 +1,10 @@
 /**
  * POST /api/admin/translate
- * Dịch tên file sang tiếng Việt dùng MyMemory API (miễn phí, không cần key)
+ * Dịch tên file sang tiếng Việt dùng OpenRouter API (Llama 3.1 free)
+ * Env: OPENROUTER_API_KEY
  */
 
 const crypto = require("crypto");
-
-// Từ điển thuật ngữ AutoCAD Anh-Việt
-const DICT = {
-  house:"nhà",building:"công trình",villa:"biệt thự",apartment:"chung cư",
-  floor:"tầng",warehouse:"nhà xưởng",factory:"nhà xưởng",roof:"mái",
-  foundation:"móng",column:"cột",beam:"dầm",slab:"sàn",stair:"cầu thang",
-  door:"cửa",window:"cửa sổ",wall:"tường",room:"phòng",bedroom:"phòng ngủ",
-  kitchen:"nhà bếp",bathroom:"phòng tắm",toilet:"vệ sinh",
-  gate:"cổng",fence:"hàng rào",railing:"lan can",
-  gear:"bánh răng",shaft:"trục",bearing:"ổ lăn",reducer:"hộp giảm tốc",
-  gearbox:"hộp giảm tốc",sprocket:"đĩa xích",pulley:"puly",
-  lathe:"máy tiện",drill:"khoan",press:"máy ép",
-  ornament:"hoa văn",pattern:"hoa văn",decorative:"trang trí",
-  cnc:"CNC",laser:"lazer",
-  thesis:"đồ án",project:"đồ án",graduation:"tốt nghiệp",
-  pile:"cọc",construction:"thi công",method:"biện pháp",
-  detail:"chi tiết",section:"mặt cắt",plan:"mặt bằng",
-  elevation:"mặt đứng",layout:"bố trí",assembly:"lắp",
-  full:"đầy đủ",complete:"hoàn chỉnh",samples:"mẫu",sample:"mẫu",
-  industrial:"công nghiệp",wood:"gỗ",steel:"thép",concrete:"bê tông",
-  frame:"khung",structure:"kết cấu",
-};
-
-function ruleBasedTranslate(text) {
-  let result = text;
-  const words = text.toLowerCase().split(/\s+/);
-  const translated = words.map(w => DICT[w] || w);
-
-  // Nếu dịch được > 30% từ → dùng kết quả rule-based
-  const dictHits = words.filter(w => DICT[w]).length;
-  if (dictHits / words.length > 0.3) {
-    return translated.join(" ");
-  }
-  return null;
-}
 
 function verifyAdmin(req) {
   const token = (req.headers["authorization"] || "").replace("Bearer ", "");
@@ -61,10 +27,6 @@ function cleanFileName(filename) {
     .trim();
 }
 
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -73,36 +35,75 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!verifyAdmin(req)) return res.status(401).json({ error: "Unauthorized" });
 
-  const { filename } = req.body || {};
+  const { filename, category } = req.body || {};
   if (!filename) return res.status(400).json({ error: "Missing filename" });
+
+  const API_KEY = process.env.OPENROUTER_API_KEY;
+  if (!API_KEY) return res.status(500).json({ error: "OPENROUTER_API_KEY not configured" });
 
   const cleanName = cleanFileName(filename);
 
-  // Bước 1: Thử MyMemory API (miễn phí)
+  const CATEGORY_HINTS = {
+    "kien-truc": "kiến trúc (nhà phố, biệt thự, nhà xưởng)",
+    "co-khi":    "cơ khí (hộp giảm tốc, chi tiết máy, CNC)",
+    "cong":      "cổng và hàng rào sắt nghệ thuật",
+    "lazer":     "lazer CNC, hoa văn trang trí",
+    "do-an":     "đồ án tốt nghiệp kỹ thuật",
+    "xay-dung":  "thi công xây dựng",
+  };
+
+  const catHint = CATEGORY_HINTS[category] || "bản vẽ kỹ thuật";
+
+  const prompt = `Dịch tên file AutoCAD sau sang tiếng Việt để làm tiêu đề sản phẩm bán hàng.
+
+Tên file: "${cleanName}"
+Danh mục: ${catHint}
+
+Yêu cầu:
+- Tiếng Việt tự nhiên, đúng thuật ngữ chuyên ngành
+- Giữ thông số kỹ thuật (5x15m, 2 tầng, 10T...)
+- 5-12 từ, ngắn gọn
+- CHỈ trả về tiêu đề, không giải thích
+
+Ví dụ:
+"Wood Door Detail" → "Chi tiết cửa gỗ công nghiệp"
+"House 2Floor 5x15 Full" → "Nhà phố 2 tầng 5×15m full bộ"
+"Gear Box 2Stage" → "Hộp giảm tốc bánh răng trụ 2 cấp"`;
+
   try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanName)}&langpair=en|vi&de=khobanve2d@gmail.com`;
-    const r   = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    const d   = await r.json();
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type":  "application/json",
+        "HTTP-Referer":  "https://khobanve2d.vercel.app",
+        "X-Title":       "KhoBanVe2D",
+      },
+      body: JSON.stringify({
+        model:    "meta-llama/llama-3.1-8b-instruct:free",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 80,
+        temperature: 0.3,
+      }),
+    });
 
-    if (d.responseStatus === 200 && d.responseData?.translatedText) {
-      let title = d.responseData.translatedText;
+    const data  = await response.json();
+    const title = data.choices?.[0]?.message?.content?.trim()
+      .replace(/^["'`]|["'`]$/g, "")
+      .replace(/^Tiêu đề[:\s]*/i, "")
+      .trim();
 
-      // Kiểm tra có dịch thực sự không (không phải trả lại y nguyên)
-      if (title.toLowerCase() !== cleanName.toLowerCase() && !/^[A-Za-z\s]+$/.test(title)) {
-        title = capitalize(title.trim());
-        return res.status(200).json({ title, method: "mymemory" });
-      }
+    if (title && title.length > 2) {
+      return res.status(200).json({ title });
     }
+    throw new Error("Empty response");
+
   } catch (e) {
-    console.log("[translate] MyMemory failed:", e.message);
+    console.error("[translate] OpenRouter error:", e.message);
+    // Fallback: trả tên đã làm sạch
+    return res.status(200).json({
+      title: cleanName.replace(/\b\w/g, l => l.toUpperCase()),
+      fallback: true
+    });
   }
-
-  // Bước 2: Fallback — từ điển nội bộ
-  const ruled = ruleBasedTranslate(cleanName);
-  if (ruled) {
-    return res.status(200).json({ title: capitalize(ruled), method: "dictionary" });
-  }
-
-  // Bước 3: Fallback cuối — trả tên đã làm sạch
-  return res.status(200).json({ title: capitalize(cleanName), method: "raw" });
 };
