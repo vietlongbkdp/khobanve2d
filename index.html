@@ -897,9 +897,9 @@ function PayPage({order,payState,setPayState,go}){
     const iv = setInterval(()=>setElapsed(e=>e+4),4000);
     const poll = setInterval(async()=>{
       try{
-        const r=await fetch(`/api/check-payment?orderId=${order.id}&amount=${order.prod.price}`);
+        const r=await fetch(`/api/check-payment?orderId=${order.id}&amount=${order.prod.price||0}`);
         const d=await r.json();
-        if(d.paid){setPayState('paid');clearInterval(poll);clearInterval(iv);}
+        if(d.paid){setPayState('paid');clearInterval(poll);clearInterval(iv);setTimeout(()=>go('success'),500);}
       }catch{}
     },4000);
     return()=>{clearInterval(iv);clearInterval(poll);};
