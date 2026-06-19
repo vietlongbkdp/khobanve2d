@@ -562,9 +562,11 @@ function HomePage({go,prods}){
           Kiến trúc · Cơ khí · Lazer CNC · Đồ án môn học · Thi công xây dựng<br/>
           <Box component="span" sx={{color:'#60A5FA',fontWeight:600}}>File gốc · Tải ngay · Giá sinh viên · Hỗ trợ 24/7</Box>
         </Typography>
-        <Stack direction={{xs:'column',sm:'row'}} spacing={1.5} justifyContent="center" sx={{mb:7}}>
+        <Stack direction={{xs:'column',sm:'row'}} spacing={1.5} justifyContent="center" sx={{mb:7}} flexWrap="wrap">
           <Button variant="contained" size="large" startIcon={<FA icon="store" style={{fontSize:16}}/>} onClick={()=>go('shop')}
             sx={{background:GRAD.primary,px:4,py:1.6,fontSize:16,boxShadow:'0 8px 30px rgba(37,99,235,.5)','&:hover':{background:GRAD.primary,filter:'brightness(1.1)'}}}>Khám Phá Ngay</Button>
+          <Button variant="outlined" size="large" startIcon={<FA icon="pen-ruler" style={{fontSize:16}}/>} onClick={()=>go('custom')}
+            sx={{color:'#fff',borderColor:'rgba(96,165,250,.5)',px:4,py:1.6,fontSize:16,':hover':{borderColor:'#60A5FA',bgcolor:'rgba(96,165,250,.08)'}}}>Nhận Vẽ Theo Yêu Cầu</Button>
           <Button variant="outlined" size="large" startIcon={<FA icon="newspaper" style={{fontSize:16}}/>} onClick={()=>go('content')}
             sx={{color:'#fff',borderColor:'rgba(255,255,255,.3)',px:4,py:1.6,fontSize:16,':hover':{borderColor:'#fff',bgcolor:'rgba(255,255,255,.06)'}}}>Đọc Bài Chia Sẻ</Button>
         </Stack>
