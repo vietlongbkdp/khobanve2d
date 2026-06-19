@@ -453,7 +453,7 @@ function NavBar({page,go,query,setQuery}){
   const {mode,toggle}=useContext(ColorModeCtx);
   const [drawer,setDrawer]=useState(false);
   const [searchOpen,setSearchOpen]=useState(false);
-  const NAV=[['home','Trang Chủ','house'],['shop','Kho Bản Vẽ','store'],['content','Chia Sẻ','newspaper']];
+  const NAV=[['home','Trang Chủ','house'],['shop','Kho Bản Vẽ','store'],['custom','Vẽ Theo Yêu Cầu','pen-ruler'],['content','Chia Sẻ','newspaper']];
   return(<>
     <AppBar position="sticky" elevation={0} sx={{background:mode==='dark'?'rgba(11,17,32,.85)':'rgba(15,23,42,.97)',backdropFilter:'blur(12px)',borderBottom:'1px solid rgba(255,255,255,.08)'}}>
       <Container maxWidth="xl">
@@ -723,11 +723,16 @@ function HomePage({go,prods}){
         <Box sx={{position:'absolute',top:-40,right:-40,width:160,height:160,borderRadius:'50%',bgcolor:'rgba(255,255,255,.12)'}}/>
         <Box sx={{position:'absolute',bottom:-50,left:-30,width:140,height:140,borderRadius:'50%',bgcolor:'rgba(255,255,255,.08)'}}/>
         <Box sx={{position:'relative'}}>
-          <Typography variant="h4" sx={{color:'#fff',fontWeight:900,mb:1.5}}>Cần bản vẽ riêng theo yêu cầu?</Typography>
-          <Typography sx={{color:'rgba(255,255,255,.85)',mb:3,maxWidth:520,mx:'auto'}}>Liên hệ Zalo để được tư vấn và đặt vẽ bản vẽ, đồ án theo đúng yêu cầu của bạn</Typography>
-          <Button variant="contained" size="large" href="https://zalo.me/0913331916" target="_blank"
-            startIcon={<ZaloIcon size={24}/>}
-            sx={{bgcolor:'#fff',color:'primary.main',px:4,py:1.5,fontSize:15,'&:hover':{bgcolor:'#F1F5F9'}}}>Liên Hệ Zalo: 0913331916</Button>
+          <Typography variant="h4" sx={{color:'#fff',fontWeight:900,mb:1.5}}>Không Tìm Thấy Bản Vẽ Phù Hợp?</Typography>
+          <Typography sx={{color:'rgba(255,255,255,.85)',mb:3,maxWidth:520,mx:'auto'}}>Chúng tôi nhận vẽ theo yêu cầu riêng: kiến trúc, cơ khí, đồ án môn học, hoa văn lazer...</Typography>
+          <Stack direction={{xs:'column',sm:'row'}} spacing={1.5} justifyContent="center">
+            <Button variant="contained" size="large" onClick={()=>go('custom')}
+              startIcon={<FA icon="pen-ruler" style={{fontSize:15}}/>}
+              sx={{bgcolor:'#fff',color:'primary.main',px:4,py:1.5,fontSize:15,'&:hover':{bgcolor:'#F1F5F9'}}}>Đặt Vẽ Theo Yêu Cầu</Button>
+            <Button variant="outlined" size="large" href="https://zalo.me/0913331916" target="_blank"
+              startIcon={<ZaloIcon size={22}/>}
+              sx={{color:'#fff',borderColor:'rgba(255,255,255,.5)',px:4,py:1.5,fontSize:15,'&:hover':{borderColor:'#fff',bgcolor:'rgba(255,255,255,.08)'}}}>Liên Hệ Zalo</Button>
+          </Stack>
         </Box>
       </Paper>
     </Container>
@@ -926,6 +931,150 @@ function ArticlePage({article,go}){
     </Paper>
   </Container>);
 }
+
+// ══ CUSTOM ORDER PAGE — Vẽ Theo Yêu Cầu ══
+function CustomOrderPage({go}){
+  const isMobile=useMediaQuery(t=>t.breakpoints.down('sm'));
+  const [form,setForm]=useState({name:'',phone:'',email:'',category:'kien-truc',description:'',budget:'',deadline:'',referenceImages:[]});
+  const [sending,setSending]=useState(false);
+  const [sent,setSent]=useState(false);
+  const [err,setErr]=useState('');
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const setImages=(imgs)=>setForm(f=>({...f,referenceImages:typeof imgs==='function'?imgs(f.referenceImages||[]):imgs}));
+
+  const submit=async()=>{
+    setErr('');
+    if(!form.name.trim()||!form.phone.trim()||!form.description.trim()){
+      setErr('Vui lòng điền đầy đủ Họ tên, SĐT/Zalo và Mô tả yêu cầu'); return;
+    }
+    setSending(true);
+    try{
+      const r=await fetch('/api/custom-requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)});
+      const d=await r.json();
+      if(r.ok){setSent(true);}
+      else setErr(d.error||'Gửi yêu cầu thất bại, vui lòng thử lại');
+    }catch{setErr('Lỗi kết nối, vui lòng thử lại hoặc liên hệ Zalo trực tiếp');}
+    finally{setSending(false);}
+  };
+
+  const STEPS=[
+    {n:'1',t:'Gửi Yêu Cầu',d:'Điền thông tin & mô tả bản vẽ bạn cần, kèm ảnh tham khảo nếu có',i8:'sent'},
+    {n:'2',t:'Nhận Báo Giá',d:'Chúng tôi liên hệ qua Zalo trong vòng 24h để báo giá & thời gian hoàn thành',i8:'price-tag'},
+    {n:'3',t:'Thanh Toán & Vẽ',d:'Xác nhận đặt cọc, đội ngũ kỹ thuật tiến hành vẽ theo đúng yêu cầu',i8:'pencil'},
+    {n:'4',t:'Nhận Bản Vẽ',d:'Nhận file CAD hoàn chỉnh, hỗ trợ sửa đổi miễn phí trong phạm vi thỏa thuận',i8:'download'},
+  ];
+
+  if(sent) return(
+    <Container maxWidth="sm" sx={{py:{xs:5,md:8}}}>
+      <Paper elevation={0} sx={{p:{xs:3,md:5},borderRadius:1.5,border:'1px solid',borderColor:'divider',textAlign:'center'}} className="kbv-fadeup">
+        <Box sx={{fontSize:64,mb:2}}>🎉</Box>
+        <Typography variant="h5" sx={{fontWeight:900,color:'success.main',mb:1.5}}>Đã Gửi Yêu Cầu Thành Công!</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{mb:3,lineHeight:1.8}}>
+          Cảm ơn bạn đã gửi yêu cầu vẽ theo thiết kế riêng.<br/>
+          Đội ngũ kỹ thuật sẽ liên hệ qua <b>{form.phone}</b> trong vòng 24h để tư vấn & báo giá.
+        </Typography>
+        <Stack direction={{xs:'column',sm:'row'}} spacing={1.5} justifyContent="center">
+          <Button variant="contained" href="https://zalo.me/0913331916" target="_blank" startIcon={<ZaloIcon size={22}/>} sx={{background:GRAD.primary}}>Chat Zalo Ngay Để Nhanh Hơn</Button>
+          <Button variant="outlined" onClick={()=>go('home')} startIcon={<FA icon="house" style={{fontSize:13}}/>}>Về Trang Chủ</Button>
+        </Stack>
+      </Paper>
+    </Container>
+  );
+
+  return(<Box>
+    {/* Hero */}
+    <Box sx={{background:GRAD.hero,py:{xs:6,md:9},px:2,textAlign:'center',position:'relative',overflow:'hidden'}}>
+      {!isMobile&&<>
+        <Box sx={{position:'absolute',right:'2%',top:'10%',width:220,opacity:.4,pointerEvents:'none'}}><SVGTSquareSection style={{width:'100%'}}/></Box>
+        <Box sx={{position:'absolute',left:'1%',bottom:'5%',width:200,opacity:.4,pointerEvents:'none'}}><SVGRulerProtractor style={{width:'100%'}}/></Box>
+      </>}
+      <Container maxWidth="md" sx={{position:'relative'}}>
+        <Chip label="📐 Dịch Vụ Vẽ Theo Yêu Cầu" sx={{mb:3,bgcolor:'rgba(59,130,246,.15)',color:'#93C5FD',border:'1px solid rgba(59,130,246,.35)',fontWeight:700,backdropFilter:'blur(6px)'}}/>
+        <Typography variant={isMobile?'h4':'h2'} sx={{color:'#fff',fontWeight:900,mb:2,lineHeight:1.2}}>
+          Không Tìm Thấy Bản Vẽ?<br/><Box component="span" className="kbv-gradient-text">Chúng Tôi Vẽ Riêng Cho Bạn</Box>
+        </Typography>
+        <Typography sx={{color:'#94A3B8',maxWidth:560,mx:'auto',fontSize:{xs:14,md:16},lineHeight:1.8}}>
+          Đội ngũ kỹ sư & KTS giàu kinh nghiệm nhận vẽ theo yêu cầu riêng: kiến trúc, cơ khí, đồ án môn học, hoa văn lazer CNC...
+          File CAD chuẩn, đúng tiến độ, hỗ trợ chỉnh sửa.
+        </Typography>
+      </Container>
+    </Box>
+
+    {/* Steps */}
+    <Container maxWidth="xl" sx={{py:{xs:5,md:7}}}>
+      <Typography variant="h5" sx={{fontWeight:900,textAlign:'center',mb:4}}>Quy Trình Thực Hiện</Typography>
+      <Grid container spacing={2.5}>
+        {STEPS.map(s=>(
+          <Grid item xs={6} md={3} key={s.n}>
+            <Paper className="kbv-card-depth" elevation={0} sx={{p:2.5,height:'100%',border:'1px solid',borderColor:'divider',textAlign:'center',position:'relative'}}>
+              <Box sx={{width:32,height:32,borderRadius:'50%',background:GRAD.primary,display:'flex',alignItems:'center',justifyContent:'center',mx:'auto',mb:1.5}}>
+                <Typography sx={{color:'#fff',fontWeight:900,fontSize:14}}>{s.n}</Typography>
+              </Box>
+              <Box sx={{mb:1,display:'flex',justifyContent:'center'}}><I8 name={s.i8} size={36}/></Box>
+              <Typography variant="subtitle2" sx={{fontWeight:800,mb:.5}}>{s.t}</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{lineHeight:1.6}}>{s.d}</Typography>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
+
+    {/* Form + sidebar info */}
+    <Box sx={{bgcolor:'background.paper',py:{xs:5,md:7},borderTop:'1px solid',borderColor:'divider'}}>
+      <Container maxWidth="lg">
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={7}>
+            <Typography variant="h5" sx={{fontWeight:900,mb:.5}}>Gửi Yêu Cầu Vẽ</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{mb:3}}>Điền thông tin càng chi tiết, chúng tôi báo giá càng chính xác & nhanh</Typography>
+            {err&&<Alert severity="error" sx={{mb:2,borderRadius:1}}>{err}</Alert>}
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}><TextField fullWidth size="small" label="Họ và tên *" value={form.name} onChange={e=>set('name',e.target.value)}/></Grid>
+              <Grid item xs={12} sm={6}><TextField fullWidth size="small" label="Số điện thoại / Zalo *" value={form.phone} onChange={e=>set('phone',e.target.value)}/></Grid>
+              <Grid item xs={12} sm={6}><TextField fullWidth size="small" label="Email (không bắt buộc)" value={form.email} onChange={e=>set('email',e.target.value)}/></Grid>
+              <Grid item xs={12} sm={6}><FormControl fullWidth size="small"><InputLabel>Loại bản vẽ</InputLabel><Select value={form.category} label="Loại bản vẽ" onChange={e=>set('category',e.target.value)}>{CATS.map(c=><MenuItem key={c.id} value={c.id}>{c.label}</MenuItem>)}<MenuItem value="khac">Khác</MenuItem></Select></FormControl></Grid>
+              <Grid item xs={12} sm={6}><TextField fullWidth size="small" label="Ngân sách dự kiến (đ)" placeholder="VD: 200.000 - 500.000" value={form.budget} onChange={e=>set('budget',e.target.value)}/></Grid>
+              <Grid item xs={12} sm={6}><TextField fullWidth size="small" label="Thời hạn mong muốn" placeholder="VD: trong 3 ngày" value={form.deadline} onChange={e=>set('deadline',e.target.value)}/></Grid>
+              <Grid item xs={12}><TextField fullWidth size="small" label="Mô tả yêu cầu *" multiline rows={5} placeholder="VD: Cần vẽ mặt bằng nhà phố 2 tầng diện tích 4x16m, có 3 phòng ngủ, mặt tiền hiện đại..." value={form.description} onChange={e=>set('description',e.target.value)}/></Grid>
+              <Grid item xs={12}><ImagePasteZone images={form.referenceImages} setImages={setImages}/></Grid>
+            </Grid>
+            <Button fullWidth variant="contained" size="large" onClick={submit} disabled={sending}
+              startIcon={sending?<CircularProgress size={16} color="inherit"/>:<FA icon="paper-plane" style={{fontSize:15}}/>}
+              sx={{mt:3,py:1.5,fontSize:15,background:GRAD.primary,boxShadow:'0 6px 20px rgba(37,99,235,.35)'}}>
+              {sending?'Đang gửi...':'Gửi Yêu Cầu Ngay'}
+            </Button>
+            <Typography variant="caption" color="text.disabled" sx={{display:'block',textAlign:'center',mt:1.5}}>
+              Hoặc liên hệ trực tiếp qua <Box component="a" href="https://zalo.me/0913331916" target="_blank" sx={{color:'#0068FF',fontWeight:700}}>Zalo: 0913331916</Box> để được tư vấn nhanh nhất
+            </Typography>
+          </Grid>
+          <Grid item xs={12} md={5}>
+            <Paper className="kbv-card-depth" elevation={0} sx={{p:3,border:'1px solid',borderColor:'divider',mb:2.5}}>
+              <Typography variant="subtitle1" sx={{fontWeight:800,mb:2}}><FA icon="circle-check" style={{marginRight:8,color:'#10B981'}}/>Vì Sao Chọn Dịch Vụ Của Chúng Tôi?</Typography>
+              {[
+                ['user-tie','Đội ngũ KTS & kỹ sư nhiều năm kinh nghiệm'],
+                ['file-circle-check','File CAD chuẩn layer, dễ chỉnh sửa'],
+                ['rotate','Hỗ trợ sửa đổi miễn phí trong phạm vi thỏa thuận'],
+                ['shield-halved','Bảo mật thông tin & ý tưởng thiết kế'],
+                ['hand-holding-dollar','Giá hợp lý, báo giá rõ ràng trước khi làm'],
+              ].map(([ic,t])=>(
+                <Box key={t} sx={{display:'flex',gap:1.5,mb:1.5,alignItems:'flex-start'}}>
+                  <FA icon={ic} style={{fontSize:15,color:'#2563EB',marginTop:2,flexShrink:0}}/>
+                  <Typography variant="body2" color="text.secondary">{t}</Typography>
+                </Box>
+              ))}
+            </Paper>
+            <Paper elevation={0} sx={{p:3,borderRadius:1.5,background:GRAD.primary,textAlign:'center'}}>
+              <ZaloIcon size={40} style={{marginBottom:8}}/>
+              <Typography sx={{color:'#fff',fontWeight:800,mb:.5}}>Cần tư vấn nhanh?</Typography>
+              <Typography variant="body2" sx={{color:'rgba(255,255,255,.8)',mb:2}}>Chat trực tiếp qua Zalo, phản hồi trong vài phút</Typography>
+              <Button variant="contained" href="https://zalo.me/0913331916" target="_blank" sx={{bgcolor:'#fff',color:'primary.main',fontWeight:700,'&:hover':{bgcolor:'#F1F5F9'}}}>0913 331 916</Button>
+            </Paper>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
+  </Box>);
+}
+
 // ══ DETAIL PAGE ══
 function DetailPage({prod,go,buy,prods=[]}){
   if(!prod) return null;
@@ -1334,18 +1483,23 @@ function AdminDashboard({token,onLogout}){
   const [modal,setModal]=useState(null);const [deleting,setDeleting]=useState(null);
   const [search,setSearch]=useState('');const [catF,setCatF]=useState('all');
   const [arts,setArts]=useState([]);const [artModal,setArtModal]=useState(null);
+  const [reqs,setReqs]=useState([]);const [reqDetail,setReqDetail]=useState(null);
   const isMobile=useMediaQuery(t=>t.breakpoints.down('md'));
   const load=async(silent=false)=>{if(!silent)setLoading(true);try{const r=await fetch('/api/products?admin=1',{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(Array.isArray(d))setProds(d);}catch{}finally{if(!silent)setLoading(false);}};
   const loadArts=async()=>{try{const r=await fetch('/api/articles?admin=1',{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(Array.isArray(d))setArts(d);}catch{}};
-  useEffect(()=>{load();loadArts();const iv=setInterval(()=>load(true),30000);return()=>clearInterval(iv);},[]);
+  const loadReqs=async()=>{try{const r=await fetch('/api/custom-requests?admin=1',{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(Array.isArray(d))setReqs(d);}catch{}};
+  useEffect(()=>{load();loadArts();loadReqs();const iv=setInterval(()=>{load(true);loadReqs();},30000);return()=>clearInterval(iv);},[]);
   const del=async(id,title)=>{if(!confirm(`Xóa "${title}"?`))return;setDeleting(id);try{const r=await fetch(`/api/products?id=${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});if(r.ok)load();}finally{setDeleting(null);}};
   const delArt=async(id,title)=>{if(!confirm(`Xóa bài "${title}"?`))return;try{const r=await fetch(`/api/articles?id=${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});if(r.ok)loadArts();}catch{}};
+  const updateReqStatus=async(id,status)=>{try{await fetch(`/api/custom-requests?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({status})});loadReqs();}catch{}};
+  const delReq=async(id)=>{if(!confirm('Xóa yêu cầu này?'))return;try{await fetch(`/api/custom-requests?id=${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});loadReqs();}catch{}};
   const filtered=prods.filter(p=>{const mc=catF==='all'||p.category===catF;const mq=!search||p.title?.toLowerCase().includes(search.toLowerCase())||p.code?.toLowerCase().includes(search.toLowerCase());return mc&&mq;});
   const totalDl=prods.reduce((s,p)=>s+(p.downloadCount||0),0);
   const paidProds=prods.filter(p=>!p.isFree&&p.price>0);
   const totalRev=paidProds.reduce((s,p)=>s+(p.downloadCount||0)*p.price,0);
   const topProds=[...prods].sort((a,b)=>(b.downloadCount||0)-(a.downloadCount||0));
-  const STATS=[['box-open',prods.length,'Tổng bản vẽ','#2563EB'],['download',totalDl.toLocaleString('vi-VN'),'Tổng lượt tải','#10B981'],['sack-dollar',vnd(totalRev),'Doanh thu ước tính','#F59E0B'],['newspaper',arts.length,'Bài viết','#0EA5E9']];
+  const newReqs=reqs.filter(r=>r.status==='new').length;
+  const STATS=[['box-open',prods.length,'Tổng bản vẽ','#2563EB'],['download',totalDl.toLocaleString('vi-VN'),'Tổng lượt tải','#10B981'],['sack-dollar',vnd(totalRev),'Doanh thu ước tính','#F59E0B'],['pen-ruler',newReqs,'Yêu cầu vẽ mới','#EC4899']];
   return(<Box sx={{minHeight:'100vh',bgcolor:'background.default'}}>
     <AppBar position="sticky" elevation={0} sx={{background:GRAD.hero,borderBottom:'1px solid rgba(255,255,255,.08)'}}>
       <Toolbar sx={{gap:1}}>
@@ -1363,6 +1517,7 @@ function AdminDashboard({token,onLogout}){
           <Tab icon={<FA icon="chart-bar" style={{fontSize:14}}/>} iconPosition="start" label="Doanh Thu"/>
           <Tab icon={<FA icon="cloud-arrow-up" style={{fontSize:14}}/>} iconPosition="start" label="Upload Hàng Loạt"/>
           <Tab icon={<FA icon="newspaper" style={{fontSize:14}}/>} iconPosition="start" label="Bài Viết"/>
+          <Tab icon={<Badge badgeContent={newReqs} color="error" sx={{'& .MuiBadge-badge':{fontSize:9,height:16,minWidth:16}}}><FA icon="pen-ruler" style={{fontSize:14}}/></Badge>} iconPosition="start" label="Yêu Cầu Vẽ"/>
         </Tabs>
         <Box sx={{p:{xs:2,md:3}}}>
           {tab===0&&<>
@@ -1412,11 +1567,56 @@ function AdminDashboard({token,onLogout}){
               </Box>
             </Paper></Grid>))}</Grid>}
           </>}
+          {tab===4&&<>
+            <Typography variant="subtitle1" sx={{fontWeight:800,mb:2}}><FA icon="pen-ruler" style={{marginRight:8,color:'#EC4899'}}/>Yêu Cầu Vẽ Theo Thiết Kế ({reqs.length})</Typography>
+            {reqs.length===0?<Box sx={{textAlign:'center',py:8}}><I8 name="inbox"/><Typography color="text.disabled" sx={{mt:1}}>Chưa có yêu cầu nào từ khách hàng.</Typography></Box>:
+            <TableContainer><Table size="small"><TableHead><TableRow sx={{bgcolor:'action.hover'}}>{['','Khách Hàng','Loại','Mô Tả','Ngày Gửi','Trạng Thái',''].map(h=><TableCell key={h} sx={{fontWeight:700,fontSize:11,color:'text.secondary',textTransform:'uppercase',whiteSpace:'nowrap'}}>{h}</TableCell>)}</TableRow></TableHead>
+              <TableBody>{reqs.map(r=>{
+                const STATUS_MAP={new:['Mới','error'],contacted:['Đã liên hệ','warning'],quoted:['Đã báo giá','info'],done:['Hoàn thành','success'],cancelled:['Đã hủy','default']};
+                const [stLabel,stColor]=STATUS_MAP[r.status]||STATUS_MAP.new;
+                return(<TableRow key={r._id} hover sx={{cursor:'pointer'}} onClick={()=>setReqDetail(r)}>
+                  <TableCell>{r.referenceImages?.[0]&&<Box component="img" src={r.referenceImages[0]} sx={{width:36,height:28,borderRadius:.5,objectFit:'cover'}}/>}</TableCell>
+                  <TableCell><Typography variant="body2" sx={{fontWeight:700}}>{r.name}</Typography><Typography variant="caption" color="text.disabled">{r.phone}</Typography></TableCell>
+                  <TableCell><Chip size="small" label={catOf(r.category).label||'Khác'} sx={{bgcolor:alpha(catOf(r.category).color,.12),color:catOf(r.category).color,fontWeight:700}}/></TableCell>
+                  <TableCell sx={{maxWidth:240}}><Typography variant="body2" sx={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{r.description}</Typography></TableCell>
+                  <TableCell sx={{fontSize:12,color:'text.secondary',whiteSpace:'nowrap'}}>{timeAgo(r.createdAt)}</TableCell>
+                  <TableCell><Chip size="small" label={stLabel} color={stColor} variant="outlined" sx={{fontWeight:700}}/></TableCell>
+                  <TableCell onClick={e=>e.stopPropagation()}><IconButton size="small" color="error" onClick={()=>delReq(r._id)}><FA icon="trash" style={{fontSize:12}}/></IconButton></TableCell>
+                </TableRow>);
+              })}</TableBody></Table></TableContainer>}
+          </>}
         </Box>
       </Paper>
     </Container>
     {modal&&<ProductModal prod={modal==='add'?null:modal} token={token} onClose={()=>setModal(null)} onSave={()=>{setModal(null);load();}}/>}
     {artModal&&<ArticleModal article={artModal==='add'?null:artModal} token={token} onClose={()=>setArtModal(null)} onSave={()=>{setArtModal(null);loadArts();}}/>}
+    {reqDetail&&<Dialog open fullWidth maxWidth="sm" onClose={()=>setReqDetail(null)} PaperProps={{sx:{borderRadius:1.5}}}>
+      <DialogTitle sx={{display:'flex',justifyContent:'space-between',alignItems:'center',fontWeight:800}}>
+        Chi Tiết Yêu Cầu<IconButton onClick={()=>setReqDetail(null)} size="small"><FA icon="xmark"/></IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        <Stack spacing={1.5}>
+          <Box><Typography variant="caption" color="text.disabled">Khách hàng</Typography><Typography variant="body1" sx={{fontWeight:700}}>{reqDetail.name}</Typography></Box>
+          <Box><Typography variant="caption" color="text.disabled">Liên hệ</Typography><Typography variant="body2">{reqDetail.phone}{reqDetail.email&&<> · {reqDetail.email}</>}</Typography></Box>
+          <Box><Typography variant="caption" color="text.disabled">Loại bản vẽ</Typography><Typography variant="body2">{catOf(reqDetail.category).label||'Khác'}</Typography></Box>
+          {reqDetail.budget&&<Box><Typography variant="caption" color="text.disabled">Ngân sách</Typography><Typography variant="body2">{reqDetail.budget}</Typography></Box>}
+          {reqDetail.deadline&&<Box><Typography variant="caption" color="text.disabled">Thời hạn</Typography><Typography variant="body2">{reqDetail.deadline}</Typography></Box>}
+          <Box><Typography variant="caption" color="text.disabled">Mô tả yêu cầu</Typography><Typography variant="body2" sx={{whiteSpace:'pre-wrap'}}>{reqDetail.description}</Typography></Box>
+          {reqDetail.referenceImages?.length>0&&<Box><Typography variant="caption" color="text.disabled" sx={{display:'block',mb:.5}}>Ảnh tham khảo</Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{gap:1}}>{reqDetail.referenceImages.map((u,i)=><Box key={i} component="img" src={u} sx={{width:80,height:60,borderRadius:.5,objectFit:'cover'}}/>)}</Stack></Box>}
+          <Box><Typography variant="caption" color="text.disabled" sx={{display:'block',mb:.5}}>Cập nhật trạng thái</Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{gap:1}}>
+              {[['contacted','Đã liên hệ','warning'],['quoted','Đã báo giá','info'],['done','Hoàn thành','success'],['cancelled','Hủy','default']].map(([st,l,c])=>(
+                <Button key={st} size="small" variant={reqDetail.status===st?'contained':'outlined'} color={c} onClick={()=>{updateReqStatus(reqDetail._id,st);setReqDetail({...reqDetail,status:st});}}>{l}</Button>
+              ))}
+            </Stack>
+          </Box>
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{p:2}}>
+        <Button href={`https://zalo.me/${reqDetail.phone?.replace(/\D/g,'')}`} target="_blank" variant="contained" startIcon={<ZaloIcon size={18}/>} sx={{background:'#0068FF'}}>Chat Zalo Khách</Button>
+      </DialogActions>
+    </Dialog>}
   </Box>);
 }
 
@@ -1454,6 +1654,7 @@ function AppContent(){
       {page==='shop'&&<ShopPage go={go} prods={prods} catFilter={catFilter} setCatFilter={setCatFilter} query={query} setQuery={setQuery} buy={buy}/>}
       {page==='content'&&<ContentPage go={go} arts={arts} goArticle={goArticle}/>}
       {page==='article'&&<ArticlePage article={article} go={go}/>}
+      {page==='custom'&&<CustomOrderPage go={go}/>}
       {page==='detail'&&<DetailPage prod={prod} go={go} buy={buy} prods={prods}/>}
       {page==='pay'&&<PayPage order={order} payState={payState} setPayState={setPayState} go={go}/>}
       {page==='success'&&<SuccessPage order={order} go={go}/>}
