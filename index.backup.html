@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="description" content="KhoBanVe2D — Thư viện bản vẽ AutoCAD chuyên nghiệp tại Việt Nam"/>
+<title>KhoBanVe2D — Thư Viện Bản Vẽ AutoCAD</title>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+
+<!-- Font Awesome 6 Free -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous"/>
+
+<!-- React 18 (pinned) -->
+<script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+
+<!-- MUI 5 (load TRƯỚC Babel, không để Babel transform) -->
+<script crossorigin src="https://unpkg.com/@mui/material@5.15.20/umd/material-ui.production.min.js"></script>
+
+<!-- Babel Standalone (pinned 7.24) -->
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Be Vietnam Pro',sans-serif;background:#F1F5F9;min-height:100vh}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:#F1F5F9}
+  ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:#94A3B8}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .kbv-fadeup{animation:fadeUp .35s ease both}
+  .kbv-card{cursor:pointer;transition:transform .2s,box-shadow .2s}
+  .kbv-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(15,23,42,.14)!important}
+  img{max-width:100%;height:auto}
+  a{color:inherit;text-decoration:none}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const {
+  Box,Container,Grid,Stack,Paper,Typography,Button,IconButton,
+  AppBar,Toolbar,Drawer,BottomNavigation,BottomNavigationAction,
+  Card,CardContent,CardMedia,CardActionArea,
+  Chip,Avatar,Badge,Divider,
+  List,ListItem,ListItemButton,ListItemText,ListItemIcon,
+  TextField,Select,MenuItem,FormControl,InputLabel,
+  Dialog,DialogTitle,DialogContent,DialogActions,
+  Alert,CircularProgress,Skeleton,Snackbar,LinearProgress,
+  Table,TableBody,TableCell,TableHead,TableRow,TableContainer,
+  Tabs,Tab,Switch,FormControlLabel,Checkbox,
+  InputAdornment,Fab,Tooltip,Rating,Collapse,
+  ThemeProvider,createTheme,CssBaseline,useMediaQuery,alpha,
+} = MaterialUI;
+const useTheme = MaterialUI.useTheme;
+const {useState,useEffect,useCallback,useRef,useMemo} = React;
+
+// ── THEME ──
+const theme = createTheme({
+  palette:{
+    primary:{main:'#2563EB',light:'#3B82F6',dark:'#1D4ED8',contrastText:'#fff'},
+    secondary:{main:'#059669',light:'#10B981',dark:'#047857',contrastText:'#fff'},
+    warning:{main:'#F59E0B'},error:{main:'#EF4444'},
+    background:{default:'#F1F5F9',paper:'#fff'},
+    text:{primary:'#0F172A',secondary:'#64748B'},
+  },
+  typography:{
+    fontFamily:"'Be Vietnam Pro',sans-serif",
+    h1:{fontWeight:900},h2:{fontWeight:800},h3:{fontWeight:800},
+    h4:{fontWeight:700},h5:{fontWeight:700},h6:{fontWeight:700},
+    button:{textTransform:'none',fontWeight:700},
+  },
+  shape:{borderRadius:12},
+  components:{
+    MuiButton:{styleOverrides:{root:{textTransform:'none',fontFamily:"'Be Vietnam Pro',sans-serif",fontWeight:700,borderRadius:10},contained:{boxShadow:'none'}}},
+    MuiCard:{styleOverrides:{root:{borderRadius:16,boxShadow:'0 1px 3px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.04)'}}},
+    MuiChip:{styleOverrides:{root:{fontFamily:"'Be Vietnam Pro',sans-serif",fontWeight:600}}},
+    MuiOutlinedInput:{styleOverrides:{root:{fontFamily:"'Be Vietnam Pro',sans-serif",borderRadius:10}}},
+    MuiInputLabel:{styleOverrides:{root:{fontFamily:"'Be Vietnam Pro',sans-serif"}}},
+    MuiMenuItem:{styleOverrides:{root:{fontFamily:"'Be Vietnam Pro',sans-serif"}}},
+    MuiTab:{styleOverrides:{root:{fontFamily:"'Be Vietnam Pro',sans-serif",fontWeight:600,textTransform:'none'}}},
+    MuiTableCell:{styleOverrides:{root:{fontFamily:"'Be Vietnam Pro',sans-serif"}}},
+    MuiAppBar:{styleOverrides:{root:{boxShadow:'0 1px 3px rgba(0,0,0,.1)'}}},
+  },
+});
+
+// ── CATS ──
+const CATS = [
+  {id:'kien-truc', label:'Kiến Trúc',       emoji:'🏛️', color:'#2563EB', bg:'#EFF6FF', fa:'fa-building'},
+  {id:'co-khi',   label:'Cơ Khí & CNC',    emoji:'⚙️', color:'#7C3AED', bg:'#F5F3FF', fa:'fa-gear'},
+  {id:'cong',     label:'Cổng & Hàng Rào', emoji:'🚪', color:'#0891B2', bg:'#ECFEFF', fa:'fa-border-all'},
+  {id:'lazer',    label:'Lazer & Trang Trí',emoji:'✨', color:'#D97706', bg:'#FFFBEB', fa:'fa-wand-magic-sparkles'},
+  {id:'do-an',    label:'Đồ Án',            emoji:'📐', color:'#DC2626', bg:'#FEF2F2', fa:'fa-ruler-combined'},
+  {id:'xay-dung', label:'Thi Công XD',      emoji:'🏗️', color:'#059669', bg:'#F0FDF4', fa:'fa-helmet-safety'},
+];
+const catOf = id => CATS.find(c=>c.id===id)||{label:id,emoji:'📁',color:'#64748B',bg:'#F1F5F9',fa:'fa-folder'};
+
+// ── UTILS ──
+const vnd = n => (Number(n)||0).toLocaleString('vi-VN')+'đ';
+const genOid = () => 'KBV'+Date.now().toString(36).toUpperCase().slice(-6);
+const formatBytes = b => b<1024?b+'B':b<1048576?(b/1024).toFixed(0)+'kB':(b/1048576).toFixed(1)+'MB';
+const FA = ({icon,style,className='',...p}) => <i className={`fa-solid fa-${icon} ${className}`} style={style} {...p}/>;
+
+// ── useProducts ──
+function useProducts(){
+  const [prods,setProds] = useState([]);
+  const [loading,setLoading] = useState(true);
+  useEffect(()=>{
+    fetch('/api/products').then(r=>r.ok?r.json():null).then(data=>{
+      if(data&&Array.isArray(data)&&data.length>0){
+        setProds(data.map(p=>({
+          id:p._id, _id:p._id, cat:p.category, title:p.title,
+          price:p.price, oldPrice:p.originalPrice||null,
+          desc:p.description, images:p.images||[],
+          ft:p.fileType, fc:p.fileCount||0, fileCount:p.fileCount||0,
+          fileSize:p.fileSize, dl:p.downloadCount||0, downloadCount:p.downloadCount||0,
+          rate:p.rating||5, rev:p.reviewCount||0,
+          free:!!p.isFree, isFree:!!p.isFree,
+          hot:p.isHot||false, isHot:p.isHot||false, isNew:p.isNew||false,
+          tags:p.tags||[], code:p.code, subcategory:p.subcategory,
+        })));
+      }
+    }).catch(()=>{}).finally(()=>setLoading(false));
+  },[]);
+  return {prods,loading};
+}
+
+// ── LIGHTBOX ──
+function Lightbox({imgs,startIdx,onClose}){
+  const [idx,setIdx]   = useState(startIdx||0);
+  const [zoom,setZoom] = useState(1);
+  const [pos,setPos]   = useState({x:0,y:0});
+  const [drag,setDrag] = useState(false);
+  const [ds,setDs]     = useState({x:0,y:0});
+  const lt = useRef(null);
+  useEffect(()=>{ setZoom(1); setPos({x:0,y:0}); },[idx]);
+  useEffect(()=>{
+    const h = e=>{
+      if(e.key==='Escape'){if(zoom>1){setZoom(1);setPos({x:0,y:0});}else onClose();}
+      if(e.key==='ArrowRight'&&zoom===1) setIdx(i=>Math.min(i+1,imgs.length-1));
+      if(e.key==='ArrowLeft'&&zoom===1)  setIdx(i=>Math.max(i-1,0));
+    };
+    window.addEventListener('keydown',h);
+    return()=>window.removeEventListener('keydown',h);
+  },[zoom,imgs.length]);
+  const onWheel = e=>{e.preventDefault();const d=e.deltaY>0?-.3:.3;setZoom(z=>Math.max(1,Math.min(5,z+d)));};
+  const onMD = e=>{if(zoom<=1)return;e.preventDefault();setDrag(true);setDs({x:e.clientX-pos.x,y:e.clientY-pos.y});};
+  const onMM = e=>{if(!drag)return;setPos({x:e.clientX-ds.x,y:e.clientY-ds.y});};
+  return(
+    <Box onClick={onClose} sx={{position:'fixed',inset:0,bgcolor:'rgba(0,0,0,.92)',zIndex:2000,
+      display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+      cursor:zoom>1?(drag?'grabbing':'grab'):'default'}}
+      onMouseMove={onMM} onMouseUp={()=>setDrag(false)} onMouseLeave={()=>setDrag(false)}>
+      {/* Toolbar */}
+      <Box sx={{position:'absolute',top:0,left:0,right:0,height:56,
+        background:'linear-gradient(to bottom,rgba(0,0,0,.7),transparent)',
+        display:'flex',alignItems:'center',justifyContent:'space-between',px:2,zIndex:1}}
+        onClick={e=>e.stopPropagation()}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <IconButton onClick={()=>{setZoom(z=>Math.max(1,z-.5));if(zoom-.5<=1)setPos({x:0,y:0});}} size="small" sx={{color:'#fff',bgcolor:'rgba(255,255,255,.1)'}}>
+            <FA icon="minus" style={{fontSize:14}}/>
+          </IconButton>
+          <Typography variant="caption" sx={{color:'#fff',fontWeight:700,minWidth:44,textAlign:'center'}}>{Math.round(zoom*100)}%</Typography>
+          <IconButton onClick={()=>setZoom(z=>Math.min(5,z+.5))} size="small" sx={{color:'#fff',bgcolor:'rgba(255,255,255,.1)'}}>
+            <FA icon="plus" style={{fontSize:14}}/>
+          </IconButton>
+          {zoom>1&&<Button size="small" onClick={()=>{setZoom(1);setPos({x:0,y:0});}} sx={{color:'rgba(255,255,255,.7)',fontSize:11}}>Reset</Button>}
+        </Stack>
+        {imgs.length>1&&<Typography variant="caption" sx={{color:'rgba(255,255,255,.7)',fontWeight:600}}>{idx+1}/{imgs.length}</Typography>}
+        <IconButton onClick={onClose} sx={{color:'#fff',bgcolor:'rgba(255,255,255,.1)'}} size="small">
+          <FA icon="xmark"/>
+        </IconButton>
+      </Box>
+      {/* Image */}
+      <Box sx={{flex:1,width:'100%',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}
+        onWheel={onWheel}>
+        <img ref={lt} src={imgs[idx]} alt="" onMouseDown={onMD}
+          onDoubleClick={()=>{if(zoom===1)setZoom(2.5);else{setZoom(1);setPos({x:0,y:0});}}}
+          style={{maxWidth:'100vw',maxHeight:'calc(100vh - 56px - 80px)',objectFit:'contain',
+            transform:`scale(${zoom}) translate(${pos.x/zoom}px,${pos.y/zoom}px)`,
+            transformOrigin:'center',transition:drag?'none':'transform .15s ease',
+            cursor:zoom>1?(drag?'grabbing':'grab'):'zoom-in',userSelect:'none',WebkitUserDrag:'none',display:'block'}}
+          draggable={false}/>
+      </Box>
+      {/* Prev/Next */}
+      {idx>0&&zoom===1&&<IconButton onClick={e=>{e.stopPropagation();setIdx(i=>i-1);}} size="large"
+        sx={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',
+          color:'#fff',bgcolor:'rgba(255,255,255,.12)',':hover':{bgcolor:'rgba(255,255,255,.25)'}}}>
+        <FA icon="chevron-left"/>
+      </IconButton>}
+      {idx<imgs.length-1&&zoom===1&&<IconButton onClick={e=>{e.stopPropagation();setIdx(i=>i+1);}} size="large"
+        sx={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',
+          color:'#fff',bgcolor:'rgba(255,255,255,.12)',':hover':{bgcolor:'rgba(255,255,255,.25)'}}}>
+        <FA icon="chevron-right"/>
+      </IconButton>}
+      {/* Thumbnails */}
+      {imgs.length>1&&<Box onClick={e=>e.stopPropagation()}
+        sx={{position:'absolute',bottom:0,left:0,right:0,height:80,
+          background:'linear-gradient(to top,rgba(0,0,0,.7),transparent)',
+          display:'flex',alignItems:'center',justifyContent:'center',gap:1,px:2,overflow:'auto'}}>
+        {imgs.map((img,i)=>(
+          <Box key={i} onClick={()=>setIdx(i)} component="img" src={img} alt=""
+            sx={{height:52,width:70,objectFit:'cover',borderRadius:1,cursor:'pointer',flexShrink:0,
+              border:i===idx?'2.5px solid #fff':'2px solid rgba(255,255,255,.25)',
+              opacity:i===idx?1:.55,transition:'all .2s'}}/>
+        ))}
+      </Box>}
+      <Typography variant="caption" sx={{position:'absolute',bottom:imgs.length>1?90:16,
+        left:'50%',transform:'translateX(-50%)',color:'rgba(255,255,255,.45)',whiteSpace:'nowrap',
+        bgcolor:'rgba(0,0,0,.3)',px:2,py:.5,borderRadius:3}}>
+        🖱️ Cuộn để zoom · Double-click phóng to
+      </Typography>
+    </Box>
+  );
+}
+
+// ── PRODUCT CARD ──
+function ProductCard({p,onOpen}){
+  const cat   = catOf(p.cat||p.category);
+  const isFree= p.free||p.isFree;
+  const price = p.price||0;
+  const op    = p.oldPrice||p.originalPrice||null;
+  const disc  = op&&price?Math.round((1-price/op)*100):0;
+  const dl    = p.dl||p.downloadCount||0;
+  const imgs  = p.images&&p.images.length>0?p.images:null;
+  return(
+    <Card className="kbv-card" onClick={()=>onOpen(p)}
+      sx={{height:'100%',display:'flex',flexDirection:'column',cursor:'pointer'}}>
+      {/* Image */}
+      <Box sx={{position:'relative',overflow:'hidden',paddingTop:'65%',bgcolor:'#0F172A'}}>
+        {imgs
+          ?<Box component="img" src={imgs[0]} alt={p.title}
+              sx={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',
+                transition:'transform .4s','&:hover':{transform:'scale(1.06)'}}}/>
+          :<Box sx={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
+              background:'linear-gradient(135deg,#0F172A,#1E3A5F)'}}>
+            <i className={`fa-solid ${cat.fa}`} style={{fontSize:48,color:'rgba(59,130,246,.4)'}}/>
+          </Box>
+        }
+        {/* Overlay gradient */}
+        <Box sx={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(15,23,42,.5) 0%,transparent 50%)',pointerEvents:'none'}}/>
+        {/* Category badge */}
+        <Box sx={{position:'absolute',bottom:8,left:8}}>
+          <Chip label={<><i className={`fa-solid ${cat.fa}`} style={{marginRight:4,fontSize:10}}/>{cat.label}</>}
+            size="small" sx={{bgcolor:'rgba(15,23,42,.65)',color:cat.color,fontWeight:700,fontSize:10,backdropFilter:'blur(4px)'}}/>
+        </Box>
+        {/* Badges top */}
+        <Box sx={{position:'absolute',top:8,left:8,display:'flex',flexDirection:'column',gap:.5}}>
+          {isFree&&<Chip label="MIỄN PHÍ" size="small" color="success" sx={{fontSize:10,fontWeight:800,height:22}}/>}
+          {!isFree&&p.isNew&&<Chip label="✦ MỚI" size="small" color="primary" sx={{fontSize:10,fontWeight:800,height:22}}/>}
+          {!isFree&&(p.hot||p.isHot)&&<Chip label="🔥 HOT" size="small" color="error" sx={{fontSize:10,fontWeight:800,height:22}}/>}
+        </Box>
+        {disc>0&&<Chip label={`-${disc}%`} size="small" color="error"
+          sx={{position:'absolute',top:8,right:8,fontSize:10,fontWeight:800,height:22}}/>}
+        {/* Downloads */}
+        <Typography variant="caption" sx={{position:'absolute',bottom:8,right:8,color:'rgba(255,255,255,.7)',fontSize:11}}>
+          <FA icon="download" style={{marginRight:3}}/>{dl.toLocaleString()}
+        </Typography>
+      </Box>
+      {/* Content */}
+      <CardContent sx={{flex:1,p:2}}>
+        <Typography variant="body2" sx={{fontWeight:700,color:'text.primary',lineHeight:1.5,mb:1,
+          display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',minHeight:44}}>
+          {p.title}
+        </Typography>
+        <Box sx={{display:'flex',alignItems:'center',justifyContent:'space-between',mt:'auto',pt:1.5,borderTop:'1px solid',borderColor:'divider'}}>
+          <Box>
+            {isFree
+              ?<Typography variant="body1" sx={{fontWeight:800,color:'success.main'}}>Miễn phí</Typography>
+              :<Box sx={{display:'flex',alignItems:'baseline',gap:.5}}>
+                <Typography variant="body1" sx={{fontWeight:800,color:'primary.main'}}>{vnd(price)}</Typography>
+                {op&&<Typography variant="caption" sx={{textDecoration:'line-through',color:'text.disabled'}}>{vnd(op)}</Typography>}
+              </Box>
+            }
+          </Box>
+          <Box sx={{display:'flex',alignItems:'center',gap:.3}}>
+            <FA icon="star" style={{fontSize:11,color:'#F59E0B'}}/>
+            <Typography variant="caption" sx={{fontWeight:600,color:'text.secondary'}}>{p.rate||p.rating||5}</Typography>
+          </Box>
+        </Box>
+        {(p.fileCount||p.fc)>0&&<Typography variant="caption" sx={{color:'text.disabled',mt:.5,display:'block'}}>
+          <FA icon="file" style={{marginRight:4}}/>{p.fileCount||p.fc} files
+          {p.fileSize&&<> · {p.fileSize}</>}
+        </Typography>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── NAVBAR ──
+function NavBar({page,go,query,setQuery}){
+  const isMobile  = useMediaQuery(theme.breakpoints.down('md'));
+  const [drawer,setDrawer] = useState(false);
+  const [searchOpen,setSearchOpen] = useState(false);
+  return(<>
+    <AppBar position="sticky" elevation={0} sx={{bgcolor:'#0F172A',borderBottom:'1px solid rgba(255,255,255,.08)'}}>
+      <Container maxWidth="xl">
+        <Toolbar sx={{gap:1,minHeight:{xs:56,md:64}}}>
+          {/* Logo */}
+          <Box onClick={()=>go('home')} sx={{display:'flex',alignItems:'center',gap:1.5,cursor:'pointer',flexShrink:0,mr:{md:3}}}>
+            <Box sx={{width:36,height:36,borderRadius:2,background:'linear-gradient(135deg,#2563EB,#3B82F6)',
+              display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <FA icon="drafting-compass" style={{color:'#fff',fontSize:18}}/>
+            </Box>
+            <Box sx={{display:{xs:'none',sm:'block'}}}>
+              <Typography variant="subtitle1" sx={{fontWeight:900,color:'#fff',lineHeight:1,letterSpacing:-.3}}>
+                KhoBanVe<span style={{color:'#3B82F6'}}>2D</span>
+              </Typography>
+              <Typography variant="caption" sx={{color:'rgba(255,255,255,.4)',fontSize:9,letterSpacing:1}}>
+                THƯ VIỆN BẢN VẼ AUTOCAD
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Search Desktop */}
+          {!isMobile&&(
+            <TextField size="small" placeholder="Tìm bản vẽ, đồ án, hoa văn lazer..." value={query}
+              onChange={e=>setQuery(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&go('shop')}
+              InputProps={{
+                startAdornment:<InputAdornment position="start"><FA icon="magnifying-glass" style={{color:'#64748B',fontSize:14}}/></InputAdornment>,
+                sx:{bgcolor:'rgba(255,255,255,.07)',color:'#fff',borderRadius:2,
+                  '& fieldset':{borderColor:'rgba(255,255,255,.1)!important'},
+                  '& input':{color:'#fff','&::placeholder':{color:'rgba(255,255,255,.35)'}},
+                  '&:hover fieldset':{borderColor:'rgba(255,255,255,.25)!important'}},
+              }}
+              sx={{flex:1,maxWidth:480}}/>
+          )}
+
+          <Box sx={{flex:1}}/>
+
+          {/* Search icon mobile */}
+          {isMobile&&(
+            <IconButton onClick={()=>setSearchOpen(s=>!s)} sx={{color:'rgba(255,255,255,.7)'}}>
+              <FA icon="magnifying-glass" style={{fontSize:18}}/>
+            </IconButton>
+          )}
+
+          {/* Nav links desktop */}
+          {!isMobile&&<Stack direction="row" spacing={.5}>
+            {[['home','Trang Chủ','house'],['shop','Kho Bản Vẽ','store']].map(([p,l,ic])=>(
+              <Button key={p} onClick={()=>go(p)} startIcon={<FA icon={ic} style={{fontSize:14}}/>}
+                sx={{color:page===p?'primary.light':'rgba(255,255,255,.6)',
+                  bgcolor:page===p?'rgba(59,130,246,.12)':'transparent',
+                  ':hover':{color:'#fff',bgcolor:'rgba(255,255,255,.07)'}}}>
+                {l}
+              </Button>
+            ))}
+          </Stack>}
+
+          {/* Hamburger mobile */}
+          {isMobile&&<IconButton onClick={()=>setDrawer(true)} sx={{color:'rgba(255,255,255,.7)'}}>
+            <FA icon="bars" style={{fontSize:20}}/>
+          </IconButton>}
+        </Toolbar>
+
+        {/* Mobile search bar */}
+        {isMobile&&searchOpen&&(
+          <Box sx={{px:1,pb:1}}>
+            <TextField fullWidth size="small" placeholder="Tìm bản vẽ..." value={query}
+              onChange={e=>setQuery(e.target.value)}
+              onKeyDown={e=>{if(e.key==='Enter'){go('shop');setSearchOpen(false);}}}
+              InputProps={{
+                startAdornment:<InputAdornment position="start"><FA icon="magnifying-glass" style={{color:'#64748B',fontSize:13}}/></InputAdornment>,
+                sx:{bgcolor:'rgba(255,255,255,.08)',color:'#fff',borderRadius:2,
+                  '& fieldset':{borderColor:'rgba(255,255,255,.1)!important'},
+                  '& input':{color:'#fff','&::placeholder':{color:'rgba(255,255,255,.35)'}}},
+              }} autoFocus/>
+          </Box>
+        )}
+      </Container>
+    </AppBar>
+
+    {/* Mobile Drawer */}
+    <Drawer anchor="right" open={drawer} onClose={()=>setDrawer(false)}
+      PaperProps={{sx:{width:280,bgcolor:'#0F172A'}}}>
+      <Box sx={{p:2}}>
+        <Box sx={{display:'flex',alignItems:'center',gap:1.5,mb:3,pb:2,borderBottom:'1px solid rgba(255,255,255,.08)'}}>
+          <Box sx={{width:32,height:32,borderRadius:1.5,background:'linear-gradient(135deg,#2563EB,#3B82F6)',
+            display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <FA icon="drafting-compass" style={{color:'#fff',fontSize:15}}/>
+          </Box>
+          <Typography sx={{fontWeight:900,color:'#fff'}}>KhoBanVe<span style={{color:'#3B82F6'}}>2D</span></Typography>
+          <Box sx={{flex:1}}/>
+          <IconButton onClick={()=>setDrawer(false)} size="small" sx={{color:'rgba(255,255,255,.5)'}}>
+            <FA icon="xmark"/>
+          </IconButton>
+        </Box>
+        <List dense>
+          {[['home','Trang Chủ','house'],['shop','Kho Bản Vẽ','store']].map(([p,l,ic])=>(
+            <ListItemButton key={p} onClick={()=>{go(p);setDrawer(false);}} selected={page===p}
+              sx={{borderRadius:2,mb:.5,color:'rgba(255,255,255,.7)',
+                '&.Mui-selected':{bgcolor:'rgba(59,130,246,.15)',color:'primary.light'},
+                ':hover':{bgcolor:'rgba(255,255,255,.05)',color:'#fff'}}}>
+              <ListItemIcon sx={{minWidth:36}}><FA icon={ic} style={{fontSize:16,color:'inherit'}}/></ListItemIcon>
+              <ListItemText primary={l} primaryTypographyProps={{fontWeight:600,fontSize:14}}/>
+            </ListItemButton>
+          ))}
+        </List>
+        <Divider sx={{borderColor:'rgba(255,255,255,.08)',my:2}}/>
+        <Typography variant="caption" sx={{color:'rgba(255,255,255,.3)',px:2,display:'block',mb:1}}>DANH MỤC</Typography>
+        <List dense>
+          {CATS.map(cat=>(
+            <ListItemButton key={cat.id} onClick={()=>{go('shop');setDrawer(false);}}
+              sx={{borderRadius:2,mb:.3,color:'rgba(255,255,255,.6)',':hover':{color:'#fff',bgcolor:'rgba(255,255,255,.05)'}}}>
+              <ListItemIcon sx={{minWidth:36}}><FA icon={cat.fa} style={{fontSize:15,color:cat.color}}/></ListItemIcon>
+              <ListItemText primary={cat.label} primaryTypographyProps={{fontSize:13,fontWeight:500}}/>
+            </ListItemButton>
+          ))}
+        </List>
+      </Box>
+    </Drawer>
+  </>);
+}
+
+// ── HOME PAGE ──
+function HomePage({go,prods}){
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const countByCat = useMemo(()=>{const m={};prods.forEach(p=>{const c=p.cat||p.category;m[c]=(m[c]||0)+1;});return m;},[prods]);
+  const featured = prods.filter(p=>p.hot||p.isHot).slice(0,6);
+  const free     = prods.filter(p=>p.free||p.isFree).slice(0,4);
+  const newest   = prods.filter(p=>p.isNew).slice(0,4);
+  const STATS = [
+    {n:prods.length>0?`${prods.length}+`:'500+',l:'Bản Vẽ',fa:'fa-drafting-compass',c:'#3B82F6'},
+    {n:'12,000+',l:'Lượt Tải',fa:'fa-download',c:'#10B981'},
+    {n:Object.keys(countByCat).length||6,l:'Danh Mục',fa:'fa-layer-group',c:'#F59E0B'},
+    {n:'4.8★',l:'Đánh Giá',fa:'fa-star',c:'#EF4444'},
+  ];
+  return(<Box>
+    {/* Hero */}
+    <Box sx={{background:'linear-gradient(160deg,#0A1628 0%,#0F2860 50%,#1a3fa8 100%)',
+      pt:{xs:6,md:10},pb:{xs:6,md:10},px:2,textAlign:'center',position:'relative',overflow:'hidden'}}>
+      {/* Grid pattern */}
+      <Box sx={{position:'absolute',inset:0,opacity:.04,
+        backgroundImage:'linear-gradient(rgba(255,255,255,.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.8) 1px,transparent 1px)',
+        backgroundSize:'50px 50px'}}/>
+      {/* Glow */}
+      <Box sx={{position:'absolute',top:'20%',left:'50%',transform:'translateX(-50%)',
+        width:{xs:300,md:600},height:{xs:150,md:300},
+        background:'radial-gradient(ellipse,rgba(59,130,246,.25) 0%,transparent 70%)',pointerEvents:'none'}}/>
+      <Container maxWidth="lg" sx={{position:'relative'}}>
+        {/* Badge */}
+        <Box sx={{display:'inline-flex',alignItems:'center',gap:1,
+          bgcolor:'rgba(59,130,246,.15)',border:'1px solid rgba(59,130,246,.3)',
+          borderRadius:10,px:2,py:.7,mb:3}}>
+          <Box sx={{width:7,height:7,borderRadius:'50%',bgcolor:'#3B82F6',boxShadow:'0 0 8px #3B82F6'}}/>
+          <Typography variant="caption" sx={{color:'#93C5FD',fontWeight:600,fontSize:12.5}}>
+            {prods.length>0?`${prods.length}+ bản vẽ AutoCAD chất lượng cao`:'Thư viện bản vẽ AutoCAD chuyên nghiệp'}
+          </Typography>
+        </Box>
+        <Typography variant={isMobile?'h4':'h2'} sx={{color:'#fff',fontWeight:900,lineHeight:1.15,mb:2,
+          letterSpacing:'-0.02em'}}>
+          Kho Bản Vẽ<br/>
+          <Box component="span" sx={{background:'linear-gradient(90deg,#60A5FA,#93C5FD)',
+            WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
+            AutoCAD 2D Việt Nam
+          </Box>
+        </Typography>
+        <Typography variant="body1" sx={{color:'#94A3B8',mb:4,lineHeight:1.8,maxWidth:520,mx:'auto',fontSize:{xs:14,md:16}}}>
+          Kiến trúc · Cơ khí · Lazer CNC · Đồ án · Thi công xây dựng<br/>
+          <Box component="span" sx={{color:'#60A5FA',fontWeight:600}}>
+            File DWG gốc · Tải ngay sau thanh toán · Hỗ trợ 24/7
+          </Box>
+        </Typography>
+        <Stack direction={{xs:'column',sm:'row'}} spacing={1.5} justifyContent="center" sx={{mb:6}}>
+          <Button variant="contained" size="large" startIcon={<FA icon="store" style={{fontSize:16}}/>}
+            onClick={()=>go('shop')} sx={{boxShadow:'0 4px 24px rgba(37,99,235,.5)',px:4,py:1.4,fontSize:15}}>
+            Khám Phá Kho Bản Vẽ
+          </Button>
+          <Button variant="outlined" size="large" startIcon={<FA icon="download" style={{fontSize:16}}/>}
+            onClick={()=>go('shop')} sx={{color:'rgba(255,255,255,.8)',borderColor:'rgba(255,255,255,.25)',
+              ':hover':{borderColor:'rgba(255,255,255,.5)',bgcolor:'rgba(255,255,255,.05)'},px:4,py:1.4,fontSize:15}}>
+            Tải Miễn Phí
+          </Button>
+        </Stack>
+        {/* Stats */}
+        <Box sx={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:0,
+          bgcolor:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',
+          borderRadius:3,overflow:'hidden',maxWidth:620,mx:'auto'}}>
+          {STATS.map((s,i)=>(
+            <Box key={s.l} sx={{p:{xs:1.5,md:2.5},textAlign:'center',
+              borderRight:i<3?'1px solid rgba(255,255,255,.08)':'none'}}>
+              <Typography sx={{fontSize:{xs:18,md:24},fontWeight:900,color:s.c,fontFamily:"'Be Vietnam Pro',sans-serif"}}>{s.n}</Typography>
+              <Typography variant="caption" sx={{color:'#64748B',fontWeight:500,fontSize:{xs:9,md:11}}}>{s.l}</Typography>
+            </Box>
+          ))}
+        </Box>
+      </Container>
+    </Box>
+
+    {/* Categories */}
+    <Container maxWidth="xl" sx={{py:{xs:5,md:7}}}>
+      <Box sx={{mb:4}}>
+        <Typography variant="h5" sx={{fontWeight:800,color:'text.primary',mb:.5}}>
+          <FA icon="layer-group" style={{marginRight:8,color:'#2563EB'}}/> Danh Mục Bản Vẽ
+        </Typography>
+        <Typography variant="body2" color="text.secondary">Chọn danh mục phù hợp với nhu cầu của bạn</Typography>
+      </Box>
+      <Grid container spacing={2}>
+        {CATS.map(cat=>{
+          const cnt = countByCat[cat.id]||0;
+          return(
+            <Grid item xs={6} sm={4} md={2} key={cat.id}>
+              <Card className="kbv-card" onClick={()=>go('shop')}
+                sx={{p:2.5,textAlign:'center',cursor:'pointer',border:`1.5px solid ${cat.bg}`,
+                  position:'relative',overflow:'hidden',height:'100%'}}>
+                <Box sx={{position:'absolute',top:-20,right:-20,width:80,height:80,
+                  bgcolor:cat.bg,borderRadius:'50%',opacity:.7}}/>
+                <Box sx={{position:'relative'}}>
+                  <Box sx={{width:44,height:44,borderRadius:2,bgcolor:cat.bg,display:'flex',
+                    alignItems:'center',justifyContent:'center',mx:'auto',mb:1.5}}>
+                    <i className={`fa-solid ${cat.fa}`} style={{fontSize:20,color:cat.color}}/>
+                  </Box>
+                  <Typography variant="body2" sx={{fontWeight:700,color:'text.primary',mb:.5,lineHeight:1.3}}>{cat.label}</Typography>
+                  <Typography variant="caption" sx={{color:cat.color,fontWeight:600}}>
+                    {cnt>0?`${cnt} bản vẽ`:'Đang cập nhật'}
+                  </Typography>
+                </Box>
+              </Card>
+            </Grid>
+          );
+        })}
+      </Grid>
+    </Container>
+
+    {/* Featured */}
+    {featured.length>0&&(
+      <Box sx={{bgcolor:'background.paper',py:{xs:5,md:7}}}>
+        <Container maxWidth="xl">
+          <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',mb:4}}>
+            <Box>
+              <Typography variant="h5" sx={{fontWeight:800,mb:.5}}>
+                <FA icon="fire" style={{marginRight:8,color:'#EF4444'}}/> Bán Chạy Nhất
+              </Typography>
+              <Typography variant="body2" color="text.secondary">Được tải nhiều nhất trong tuần</Typography>
+            </Box>
+            <Button endIcon={<FA icon="arrow-right" style={{fontSize:13}}/>} onClick={()=>go('shop')}
+              sx={{color:'text.secondary',display:{xs:'none',sm:'flex'}}}>Xem tất cả</Button>
+          </Box>
+          <Grid container spacing={2.5}>
+            {featured.map(p=><Grid item xs={12} sm={6} md={4} lg={3} key={p.id||p._id}>
+              <ProductCard p={p} onOpen={prod=>go('detail',prod)}/>
+            </Grid>)}
+          </Grid>
+        </Container>
+      </Box>
+    )}
+
+    {/* Newest */}
+    {newest.length>0&&(
+      <Container maxWidth="xl" sx={{py:{xs:5,md:7}}}>
+        <Box sx={{mb:4}}>
+          <Typography variant="h5" sx={{fontWeight:800,mb:.5}}>
+            <FA icon="sparkles" style={{marginRight:8,color:'#7C3AED'}}/> Mới Nhất
+          </Typography>
+          <Typography variant="body2" color="text.secondary">Vừa được thêm vào kho</Typography>
+        </Box>
+        <Grid container spacing={2.5}>
+          {newest.map(p=><Grid item xs={12} sm={6} md={4} lg={3} key={p.id||p._id}>
+            <ProductCard p={p} onOpen={prod=>go('detail',prod)}/>
+          </Grid>)}
+        </Grid>
+      </Container>
+    )}
+
+    {/* Free */}
+    {free.length>0&&(
+      <Box sx={{background:'linear-gradient(135deg,#F0FDF4,#ECFDF5)',py:{xs:5,md:7}}}>
+        <Container maxWidth="xl">
+          <Box sx={{mb:4}}>
+            <Typography variant="h5" sx={{fontWeight:800,mb:.5}}>
+              <FA icon="gift" style={{marginRight:8,color:'#059669'}}/> Tải Miễn Phí
+            </Typography>
+            <Typography variant="body2" color="text.secondary">Không cần thanh toán — tải ngay</Typography>
+          </Box>
+          <Grid container spacing={2.5}>
+            {free.map(p=><Grid item xs={12} sm={6} md={4} lg={3} key={p.id||p._id}>
+              <ProductCard p={p} onOpen={prod=>go('detail',prod)}/>
+            </Grid>)}
+          </Grid>
+        </Container>
+      </Box>
+    )}
+
+    {prods.length===0&&(
+      <Container maxWidth="sm" sx={{py:10,textAlign:'center'}}>
+        <FA icon="drafting-compass" style={{fontSize:64,color:'#CBD5E1',marginBottom:16}}/>
+        <Typography variant="h6" color="text.secondary" gutterBottom>Kho bản vẽ đang được cập nhật</Typography>
+        <Typography variant="body2" color="text.disabled">Admin đang thêm sản phẩm vào hệ thống</Typography>
+      </Container>
+    )}
+
+    {/* Footer */}
+    <Box sx={{bgcolor:'#0A1628',color:'rgba(255,255,255,.6)',py:6,px:2}}>
+      <Container maxWidth="xl">
+        <Grid container spacing={4} sx={{mb:4}}>
+          <Grid item xs={12} md={4}>
+            <Box sx={{display:'flex',alignItems:'center',gap:1.5,mb:2}}>
+              <Box sx={{width:36,height:36,borderRadius:2,background:'linear-gradient(135deg,#2563EB,#3B82F6)',
+                display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <FA icon="drafting-compass" style={{color:'#fff',fontSize:17}}/>
+              </Box>
+              <Typography sx={{fontWeight:900,color:'#fff',fontSize:17}}>
+                KhoBanVe<span style={{color:'#3B82F6'}}>2D</span>
+              </Typography>
+            </Box>
+            <Typography variant="body2" sx={{lineHeight:1.8,maxWidth:300}}>
+              Nền tảng mua bán bản vẽ AutoCAD chuyên nghiệp tại Việt Nam. Tải ngay sau thanh toán.
+            </Typography>
+          </Grid>
+          <Grid item xs={6} md={4}>
+            <Typography variant="caption" sx={{color:'rgba(255,255,255,.4)',letterSpacing:1,fontWeight:700,display:'block',mb:1.5}}>DANH MỤC</Typography>
+            {CATS.map(cat=>(
+              <Typography key={cat.id} variant="body2" onClick={()=>go('shop')}
+                sx={{mb:.8,cursor:'pointer',':hover':{color:'#fff'}}}>
+                <i className={`fa-solid ${cat.fa}`} style={{marginRight:8,fontSize:12,color:cat.color}}/>{cat.label}
+              </Typography>
+            ))}
+          </Grid>
+          <Grid item xs={6} md={4}>
+            <Typography variant="caption" sx={{color:'rgba(255,255,255,.4)',letterSpacing:1,fontWeight:700,display:'block',mb:1.5}}>LIÊN HỆ</Typography>
+            {[['envelope','khobanve2d@gmail.com'],['building-columns','VPBank · 0913331916'],['user','Nguyễn Viết Long']].map(([ic,t])=>(
+              <Typography key={t} variant="body2" sx={{mb:.8,display:'flex',alignItems:'center',gap:1}}>
+                <FA icon={ic} style={{fontSize:12,color:'#3B82F6',width:14}}/>  {t}
+              </Typography>
+            ))}
+          </Grid>
+        </Grid>
+        <Divider sx={{borderColor:'rgba(255,255,255,.07)',mb:3}}/>
+        <Box sx={{display:'flex',justifyContent:'space-between',flexWrap:'wrap',gap:1}}>
+          <Typography variant="caption">© 2025 KhoBanVe2D — Bản quyền thuộc về Nguyễn Viết Long</Typography>
+          <Typography variant="caption">Thanh toán bảo mật · File DWG gốc · Hỗ trợ 24/7</Typography>
+        </Box>
+      </Container>
+    </Box>
+  </Box>);
+}
+
+// ── SHOP PAGE ──
+function ShopPage({go,prods,catFilter,setCatFilter,query,setQuery,buy}){
+  const isMobile   = useMediaQuery(theme.breakpoints.down('md'));
+  const [drawerOpen,setDrawerOpen] = useState(false);
+  const countByCat = useMemo(()=>{const m={};prods.forEach(p=>{const c=p.cat||p.category;m[c]=(m[c]||0)+1;});return m;},[prods]);
+  const filtered = useMemo(()=>prods.filter(p=>{
+    const mc=(catFilter==='all')||(p.cat||p.category)===catFilter;
+    const mq=!query||p.title?.toLowerCase().includes(query.toLowerCase());
+    return mc&&mq;
+  }),[prods,catFilter,query]);
+  const SidebarContent=()=>(
+    <Box sx={{width:{xs:280,md:'auto'}}}>
+      <Typography variant="subtitle2" sx={{fontWeight:800,color:'text.primary',mb:2,px:{xs:2,md:0},pt:{xs:2,md:0}}}>
+        <FA icon="filter" style={{marginRight:8,color:'#2563EB'}}/> DANH MỤC
+      </Typography>
+      <List dense disablePadding>
+        {[{id:'all',label:'Tất cả',fa:'fa-border-all',color:'#2563EB',count:prods.length},...CATS.map(c=>({...c,count:countByCat[c.id]||0}))].map(cat=>(
+          <ListItemButton key={cat.id} selected={catFilter===cat.id}
+            onClick={()=>{setCatFilter(cat.id);if(isMobile)setDrawerOpen(false);}}
+            sx={{borderRadius:2,mb:.5,px:1.5,
+              '&.Mui-selected':{bgcolor:'rgba(37,99,235,.08)',color:'primary.main'},
+              ':hover':{bgcolor:'rgba(37,99,235,.05)'}}}>
+            <ListItemIcon sx={{minWidth:32}}><i className={`fa-solid ${cat.fa||'fa-folder'}`} style={{fontSize:14,color:catFilter===cat.id?cat.color:'#94A3B8'}}/></ListItemIcon>
+            <ListItemText primary={cat.label} primaryTypographyProps={{fontSize:13,fontWeight:catFilter===cat.id?700:500}}/>
+            <Chip label={cat.count} size="small" sx={{height:20,fontSize:10,minWidth:28,
+              bgcolor:catFilter===cat.id?'primary.main':'rgba(0,0,0,.06)',
+              color:catFilter===cat.id?'#fff':'text.secondary'}}/>
+          </ListItemButton>
+        ))}
+      </List>
+    </Box>
+  );
+  return(<Container maxWidth="xl" sx={{py:{xs:2,md:4}}}>
+    {/* Mobile toolbar */}
+    <Box sx={{display:{xs:'flex',md:'none'},gap:1,mb:2}}>
+      <TextField fullWidth size="small" placeholder="Tìm bản vẽ..." value={query}
+        onChange={e=>setQuery(e.target.value)}
+        InputProps={{startAdornment:<InputAdornment position="start"><FA icon="magnifying-glass" style={{fontSize:13,color:'#94A3B8'}}/></InputAdornment>}}/>
+      <Button variant="outlined" startIcon={<FA icon="filter" style={{fontSize:13}}/>}
+        onClick={()=>setDrawerOpen(true)} sx={{flexShrink:0,whiteSpace:'nowrap'}}>
+        Lọc
+      </Button>
+    </Box>
+    <Grid container spacing={3}>
+      {/* Sidebar Desktop */}
+      <Grid item md={2.5} sx={{display:{xs:'none',md:'block'}}}>
+        <Paper elevation={0} sx={{p:2,borderRadius:3,border:'1px solid',borderColor:'divider',position:'sticky',top:84}}>
+          <SidebarContent/>
+        </Paper>
+      </Grid>
+      {/* Main */}
+      <Grid item xs={12} md={9.5}>
+        <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'center',mb:2}}>
+          <Typography variant="body2" color="text.secondary">
+            <FA icon="box-open" style={{marginRight:6}}/> Tìm thấy <b>{filtered.length}</b> bản vẽ
+            {catFilter!=='all'&&<> trong <b>{CATS.find(c=>c.id===catFilter)?.label}</b></>}
+          </Typography>
+        </Box>
+        {filtered.length===0
+          ?<Box sx={{textAlign:'center',py:10}}>
+            <FA icon="magnifying-glass" style={{fontSize:56,color:'#CBD5E1',marginBottom:16}}/>
+            <Typography variant="h6" color="text.secondary">Không tìm thấy bản vẽ phù hợp</Typography>
+          </Box>
+          :<Grid container spacing={2.5}>
+            {filtered.map(p=><Grid item xs={12} sm={6} lg={4} key={p.id||p._id}>
+              <ProductCard p={p} onOpen={prod=>go('detail',prod)}/>
+            </Grid>)}
+          </Grid>
+        }
+      </Grid>
+    </Grid>
+    {/* Mobile Filter Drawer */}
+    <Drawer anchor="left" open={drawerOpen} onClose={()=>setDrawerOpen(false)}>
+      <Box sx={{p:2,display:'flex',justifyContent:'flex-end'}}>
+        <IconButton onClick={()=>setDrawerOpen(false)} size="small">
+          <FA icon="xmark"/>
+        </IconButton>
+      </Box>
+      <Box sx={{px:2,pb:2}}><SidebarContent/></Box>
+    </Drawer>
+  </Container>);
+}
+
+// ── DETAIL PAGE ──
+function DetailPage({prod,go,buy,prods=[]}){
+  if(!prod) return null;
+  const cat     = catOf(prod.cat||prod.category);
+  const isFree  = prod.free||prod.isFree;
+  const price   = prod.price||0;
+  const op      = prod.oldPrice||prod.originalPrice||null;
+  const dl      = prod.dl||prod.downloadCount||0;
+  const rate    = prod.rate||prod.rating||5;
+  const rev     = prod.rev||prod.reviewCount||0;
+  const fc      = prod.fileCount||prod.fc||0;
+  const imgs    = (prod.images&&prod.images.length>0)?prod.images:null;
+  const prodId  = prod.id||prod._id||'';
+  const related = prods.filter(rp=>(rp.cat||rp.category)===(prod.cat||prod.category)&&(rp.id||rp._id)!==(prod.id||prod._id)).slice(0,4);
+  const [sel,setSel]   = useState(0);
+  const [lb,setLb]     = useState(null);
+  const isMobile       = useMediaQuery(theme.breakpoints.down('md'));
+  const allImgs        = imgs||[`https://placehold.co/600x400/0F172A/3B82F6?text=${encodeURIComponent(prod.title||'Ban Ve')}`];
+  return(<Box>
+    {lb!==null&&<Lightbox imgs={allImgs} startIdx={lb} onClose={()=>setLb(null)}/>}
+    <Container maxWidth="xl" sx={{py:{xs:2,md:4}}}>
+      {/* Breadcrumb */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{mb:3}}>
+        <Button startIcon={<FA icon="arrow-left" style={{fontSize:13}}/>} onClick={()=>go('shop')}
+          variant="text" size="small" sx={{color:'text.secondary',pl:0}}>
+          Quay lại kho bản vẽ
+        </Button>
+      </Stack>
+      <Grid container spacing={4}>
+        {/* Left: Gallery */}
+        <Grid item xs={12} md={6}>
+          {/* Main image */}
+          <Box onClick={()=>setLb(sel)} sx={{borderRadius:3,overflow:'hidden',mb:1.5,
+            cursor:'zoom-in',position:'relative',paddingTop:'70%',bgcolor:'#0F172A'}}>
+            <Box component="img" src={allImgs[Math.min(sel,allImgs.length-1)]} alt={prod.title}
+              sx={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',
+                transition:'transform .3s','&:hover':{transform:'scale(1.02)'}}}/>
+            <Box sx={{position:'absolute',bottom:10,right:10,bgcolor:'rgba(0,0,0,.5)',
+              color:'#fff',borderRadius:2,px:1.5,py:.5,display:'flex',alignItems:'center',gap:.5,backdropFilter:'blur(4px)'}}>
+              <FA icon="magnifying-glass-plus" style={{fontSize:12}}/> 
+              <Typography variant="caption" sx={{fontWeight:600}}>Xem ảnh to</Typography>
+            </Box>
+          </Box>
+          {/* Thumbnails */}
+          {allImgs.length>1&&(
+            <Stack direction="row" spacing={1} sx={{flexWrap:'wrap',gap:1}}>
+              {allImgs.map((img,i)=>(
+                <Box key={i} onClick={()=>setSel(i)}
+                  sx={{width:70,height:54,borderRadius:1.5,overflow:'hidden',cursor:'pointer',flexShrink:0,
+                    border:sel===i?'2.5px solid':'2px solid',
+                    borderColor:sel===i?'primary.main':'divider'}}>
+                  <Box component="img" src={img} alt="" sx={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                </Box>
+              ))}
+            </Stack>
+          )}
+          {/* Info grid */}
+          <Grid container spacing={1.5} sx={{mt:2}}>
+            {[
+              ['file-lines',`${fc} files`,'Số file'],
+              ['download',dl.toLocaleString(),'Lượt tải'],
+              ['star',`${rate}/5 (${rev} đánh giá)`,'Đánh giá'],
+              ['floppy-disk',prod.ft||prod.fileType||'DWG','Định dạng'],
+              ...(prod.fileSize?[['weight-hanging',prod.fileSize,'Dung lượng']]:[]),
+            ].map(([ic,v,l])=>(
+              <Grid item xs={6} sm={4} key={l}>
+                <Paper elevation={0} sx={{p:1.5,borderRadius:2,border:'1px solid',borderColor:'divider',textAlign:'center'}}>
+                  <FA icon={ic} style={{fontSize:16,color:'#2563EB',marginBottom:4}}/>
+                  <Typography variant="caption" sx={{display:'block',color:'text.secondary',fontSize:10,mb:.3}}>{l}</Typography>
+                  <Typography variant="body2" sx={{fontWeight:700,fontSize:12}}>{v}</Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+        {/* Right: Info */}
+        <Grid item xs={12} md={6}>
+          {/* Badges */}
+          <Stack direction="row" spacing={1} flexWrap="wrap" sx={{mb:1.5,gap:.8}}>
+            <Chip icon={<i className={`fa-solid ${cat.fa}`} style={{fontSize:11,color:cat.color}}/>}
+              label={cat.label} size="small" sx={{bgcolor:cat.bg,color:cat.color,fontWeight:700}}/>
+            {isFree&&<Chip label="MIỄN PHÍ" size="small" color="success" sx={{fontWeight:800}}/>}
+            {prod.isNew&&<Chip label="✦ MỚI" size="small" color="primary" sx={{fontWeight:700}}/>}
+            {(prod.hot||prod.isHot)&&<Chip label="🔥 HOT" size="small" color="error" sx={{fontWeight:700}}/>}
+            {prod.code&&<Chip label={`#${prod.code}`} size="small" sx={{bgcolor:'#F1F5F9',color:'text.disabled',fontFamily:'monospace'}}/>}
+          </Stack>
+          <Typography variant={isMobile?'h5':'h4'} sx={{fontWeight:900,color:'text.primary',lineHeight:1.35,mb:1.5}}>{prod.title}</Typography>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{mb:2}}>
+            <Rating value={rate} precision={0.5} readOnly size="small" sx={{'& .MuiRating-iconFilled':{color:'#F59E0B'}}}/>
+            <Typography variant="body2" color="text.secondary">{rate} ({rev} đánh giá)</Typography>
+          </Stack>
+          <Paper elevation={0} sx={{p:2,borderRadius:2,border:'1px solid',borderColor:'divider',mb:2,bgcolor:'#FAFBFC'}}>
+            <Typography variant="body2" sx={{color:'text.secondary',lineHeight:1.8}}>
+              {prod.desc||prod.description||'Chưa có mô tả.'}
+            </Typography>
+          </Paper>
+          {prod.tags&&prod.tags.length>0&&(
+            <Stack direction="row" spacing={.8} flexWrap="wrap" sx={{mb:2,gap:.8}}>
+              {prod.tags.map(t=><Chip key={t} label={`#${t}`} size="small" variant="outlined" sx={{fontSize:11}}/>)}
+            </Stack>
+          )}
+          {/* Purchase card */}
+          <Paper elevation={2} sx={{p:{xs:2.5,md:3},borderRadius:3,border:'1px solid',borderColor:'divider'}}>
+            {isFree?(
+              <>
+                <Typography variant="h5" sx={{fontWeight:900,color:'success.main',mb:2}}>Miễn phí</Typography>
+                <Button fullWidth variant="contained" color="success" size="large"
+                  startIcon={<FA icon="download" style={{fontSize:16}}/>}
+                  onClick={async(e)=>{
+                    const btn=e.currentTarget; btn.disabled=true;
+                    btn.textContent='⏳ Đang tạo link…';
+                    try{
+                      const r=await fetch(`/api/get-download-link?orderId=FREE&productId=${prodId}&amount=0`);
+                      const d=await r.json();
+                      const url=d.token?`/api/download?token=${d.token}`:d.url;
+                      if(url){sessionStorage.setItem(`free_${prodId}`,'done');window.location.href=url;btn.textContent='✅ Đang tải...';}
+                      else{btn.textContent='⚠️ Lỗi — thử lại';btn.disabled=false;}
+                    }catch{btn.textContent='⚠️ Lỗi — thử lại';btn.disabled=false;}
+                  }}
+                  sx={{py:1.5,fontSize:15,mb:1.5}}>
+                  Tải File Ngay (Miễn Phí)
+                </Button>
+              </>
+            ):(
+              <>
+                <Box sx={{display:'flex',alignItems:'baseline',gap:1.5,mb:.5}}>
+                  <Typography variant="h4" sx={{fontWeight:900,color:'primary.main'}}>{vnd(price)}</Typography>
+                  {op&&<Typography variant="h6" sx={{textDecoration:'line-through',color:'text.disabled',fontWeight:400}}>{vnd(op)}</Typography>}
+                </Box>
+                {op&&<Typography variant="body2" sx={{color:'success.main',fontWeight:700,mb:2}}>
+                  <FA icon="tag" style={{marginRight:4}}/> Tiết kiệm {vnd(op-price)} ({Math.round((1-price/op)*100)}% giảm)
+                </Typography>}
+                <Button fullWidth variant="contained" size="large" onClick={()=>buy(prod)}
+                  startIcon={<FA icon="cart-shopping" style={{fontSize:16}}/>}
+                  sx={{py:1.5,fontSize:15,mb:1.5,boxShadow:'0 4px 16px rgba(37,99,235,.35)'}}>
+                  Mua Ngay & Tải Xuống
+                </Button>
+                <Typography variant="caption" sx={{display:'block',textAlign:'center',color:'text.disabled',mb:1.5}}>
+                  <FA icon="lock" style={{marginRight:4,color:'#10B981'}}/> Thanh toán an toàn qua VietQR · Nhận link tải ngay
+                </Typography>
+              </>
+            )}
+            {/* Zalo */}
+            <Button fullWidth variant="outlined" size="large" href="https://zalo.me/0913331916" target="_blank"
+              startIcon={<FA icon="comment-dots" style={{fontSize:16}}/>}
+              sx={{py:1.3,fontSize:14,color:'#0068FF',borderColor:'#0068FF',
+                ':hover':{bgcolor:'rgba(0,104,255,.05)',borderColor:'#0068FF'}}}>
+              Liên Hệ Zalo: 0913331916
+            </Button>
+          </Paper>
+        </Grid>
+      </Grid>
+      {/* Related */}
+      {related.length>0&&(
+        <Box sx={{mt:6}}>
+          <Typography variant="h6" sx={{fontWeight:800,mb:3}}>
+            <FA icon="layer-group" style={{marginRight:8,color:'#2563EB'}}/> Bản Vẽ Liên Quan
+          </Typography>
+          <Grid container spacing={2.5}>
+            {related.map(rp=><Grid item xs={12} sm={6} md={3} key={rp.id||rp._id}>
+              <ProductCard p={rp} onOpen={xp=>go('detail',xp)}/>
+            </Grid>)}
+          </Grid>
+        </Box>
+      )}
+    </Container>
+  </Box>);
+}
+
+// ── PAY PAGE ──
+function PayPage({order,payState,setPayState,go}){
+  const [elapsed,setElapsed] = useState(0);
+  useEffect(()=>{
+    if(!order||payState!=='waiting') return;
+    const iv = setInterval(()=>setElapsed(e=>e+4),4000);
+    const poll = setInterval(async()=>{
+      try{
+        const r=await fetch(`/api/check-payment?orderId=${order.id}&amount=${order.prod.price||0}`);
+        const d=await r.json();
+        if(d.paid){setPayState('paid');clearInterval(poll);clearInterval(iv);setTimeout(()=>go('success'),500);}
+      }catch{}
+    },4000);
+    return()=>{clearInterval(iv);clearInterval(poll);};
+  },[order,payState]);
+  if(!order) return null;
+  const amt   = order.prod.price||0;
+  const qrURL = `https://img.vietqr.io/image/VPB-0913331916-compact2.png?amount=${amt}&addInfo=${encodeURIComponent(order.id)}&accountName=${encodeURIComponent('NGUYEN VIET LONG')}`;
+  return(
+    <Container maxWidth="sm" sx={{py:{xs:3,md:6}}}>
+      <Paper elevation={0} sx={{p:{xs:3,md:4},borderRadius:3,border:'1px solid',borderColor:'divider'}} className="kbv-fadeup">
+        <Box sx={{textAlign:'center',mb:3}}>
+          <Box sx={{width:56,height:56,borderRadius:'50%',bgcolor:'primary.main',
+            display:'flex',alignItems:'center',justifyContent:'center',mx:'auto',mb:1.5,
+            boxShadow:'0 4px 16px rgba(37,99,235,.35)'}}>
+            <FA icon="qrcode" style={{fontSize:24,color:'#fff'}}/>
+          </Box>
+          <Typography variant="h5" sx={{fontWeight:900,mb:.5}}>Thanh Toán VietQR</Typography>
+          <Typography variant="body2" color="text.secondary">Quét mã QR bằng app ngân hàng</Typography>
+        </Box>
+        {/* Order summary */}
+        <Paper elevation={0} sx={{p:2,borderRadius:2,bgcolor:'primary.main',mb:3}}>
+          <Typography variant="caption" sx={{color:'rgba(255,255,255,.7)',display:'block',mb:.5}}>Đơn hàng</Typography>
+          <Typography variant="body2" sx={{fontWeight:700,color:'#fff',mb:.5}}>{order.prod.title}</Typography>
+          <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <Typography variant="caption" sx={{color:'rgba(255,255,255,.7)'}}>Mã: <b style={{color:'#fff'}}>{order.id}</b></Typography>
+            <Typography variant="h6" sx={{fontWeight:900,color:'#fff'}}>{vnd(amt)}</Typography>
+          </Box>
+        </Paper>
+        {/* QR */}
+        <Box sx={{textAlign:'center',mb:2}}>
+          <Box component="img" src={qrURL} alt="QR" sx={{width:{xs:'85%',sm:280},borderRadius:2,border:'2px solid',borderColor:'divider'}}/>
+        </Box>
+        {/* Instructions */}
+        <Alert severity="info" icon={<FA icon="circle-info" style={{fontSize:16}}/>}
+          sx={{mb:2,borderRadius:2,'& .MuiAlert-message':{fontSize:13}}}>
+          <b>Nội dung chuyển khoản: {order.id}</b><br/>
+          VPBank · 0913331916 · NGUYEN VIET LONG
+        </Alert>
+        {/* Status */}
+        {payState==='waiting'&&(
+          <Box sx={{textAlign:'center',py:1.5}}>
+            <CircularProgress size={20} sx={{mr:1}}/>
+            <Typography variant="body2" color="text.secondary" component="span">
+              Đang chờ thanh toán... ({elapsed}s)
+            </Typography>
+          </Box>
+        )}
+        {payState==='paid'&&(
+          <Alert severity="success" icon={<FA icon="circle-check" style={{fontSize:16}}/>} sx={{mb:2,borderRadius:2}}>
+            Thanh toán thành công! Đang tạo link tải...
+          </Alert>
+        )}
+        <Button fullWidth variant="outlined" startIcon={<FA icon="arrow-left" style={{fontSize:13}}/>}
+          onClick={()=>go('shop')} sx={{color:'text.secondary',borderColor:'divider'}}>
+          Hủy & Quay Lại
+        </Button>
+        <Box sx={{textAlign:'center',mt:2}}>
+          <Typography component="a" href="https://zalo.me/0913331916" target="_blank"
+            variant="caption" sx={{color:'#0068FF',display:'flex',alignItems:'center',justifyContent:'center',gap:.5}}>
+            <FA icon="comment-dots" style={{fontSize:12}}/> Zalo hỗ trợ: 0913331916
+          </Typography>
+        </Box>
+      </Paper>
+    </Container>
+  );
+}
+
+// ── SUCCESS PAGE ──
+function SuccessPage({order,go}){
+  const [dlUrl,setDlUrl]             = useState(null);
+  const [dlLoading,setDlLoading]     = useState(true);
+  const [dlError,setDlError]         = useState(null);
+  const [downloaded,setDownloaded]   = useState(false);
+  useEffect(()=>{
+    if(!order)return;
+    if(sessionStorage.getItem('dl_'+order.id)==='done') setDownloaded(true);
+  },[order]);
+  const doDownload = url=>{
+    sessionStorage.setItem('dl_'+order.id,'done');
+    setDownloaded(true);
+    window.location.href=url;
+  };
+  useEffect(()=>{
+    if(!order||downloaded)return;
+    (async()=>{
+      try{
+        const productId=order.prod.id||order.prod._id||'';
+        const res=await fetch(`/api/get-download-link?orderId=${order.id}&productId=${productId}&amount=${order.prod.price}`);
+        const data=await res.json();
+        if(data.token){const u=`/api/download?token=${data.token}`;setDlUrl(u);setTimeout(()=>doDownload(u),2500);}
+        else if(data.url){setDlUrl(data.url);setTimeout(()=>doDownload(data.url),2500);}
+        else setDlError('Không lấy được link tải. Liên hệ khobanve2d@gmail.com');
+      }catch{setDlError('Lỗi kết nối server.');}
+      finally{setDlLoading(false);}
+    })();
+  },[order]);
+  if(!order) return null;
+  return(
+    <Container maxWidth="sm" sx={{py:{xs:3,md:6}}}>
+      <Paper elevation={0} sx={{p:{xs:3,md:4},borderRadius:3,border:'1px solid',borderColor:'divider',textAlign:'center'}} className="kbv-fadeup">
+        <Box sx={{fontSize:{xs:56,md:72},mb:2}}>🎉</Box>
+        <Typography variant="h5" sx={{fontWeight:900,color:'success.main',mb:1}}>Thanh Toán Thành Công!</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{mb:3,lineHeight:1.7}}>
+          {downloaded?'File đã được tải xuống thành công.':<>Cảm ơn bạn đã mua bản vẽ.<br/>Đang tạo link tải bảo mật.</>}
+        </Typography>
+        <Paper elevation={0} sx={{p:2,borderRadius:2,bgcolor:'success.light',bgcolor:'rgba(5,150,105,.08)',border:'1px solid rgba(5,150,105,.2)',mb:3}}>
+          <Typography variant="caption" color="text.secondary" gutterBottom sx={{display:'block'}}>
+            <FA icon="box" style={{marginRight:4}}/> Đơn hàng
+          </Typography>
+          <Typography variant="body2" sx={{fontWeight:700,mb:.5}}>{order.prod.title}</Typography>
+          <Typography variant="caption" color="text.disabled">Mã đơn: <b>{order.id}</b></Typography>
+        </Paper>
+        {dlLoading&&!downloaded&&(
+          <Box sx={{py:2,display:'flex',alignItems:'center',justifyContent:'center',gap:1.5}}>
+            <CircularProgress size={18}/>
+            <Typography variant="body2" color="text.secondary">Đang tạo link tải bảo mật…</Typography>
+          </Box>
+        )}
+        {dlError&&(
+          <Alert severity="error" sx={{mb:2,borderRadius:2,textAlign:'left'}}>
+            {dlError}
+            <Box sx={{mt:1}}><Button size="small" href="https://zalo.me/0913331916" target="_blank"
+              startIcon={<FA icon="comment-dots"/>} sx={{color:'#0068FF'}}>Zalo: 0913331916</Button></Box>
+          </Alert>
+        )}
+        {downloaded&&!dlError&&(
+          <Alert severity="success" icon={<FA icon="circle-check" style={{fontSize:18}}/>}
+            sx={{mb:2,borderRadius:2,fontWeight:700}}>
+            Đã tải xuống thành công!
+          </Alert>
+        )}
+        {!dlLoading&&!dlError&&!downloaded&&dlUrl&&(
+          <Button fullWidth variant="contained" color="success" size="large"
+            startIcon={<FA icon="download" style={{fontSize:16}}/>}
+            onClick={()=>doDownload(dlUrl)} sx={{py:1.5,mb:2}}>
+            Tải File Ngay
+          </Button>
+        )}
+        <Button fullWidth variant="outlined" startIcon={<FA icon="house" style={{fontSize:13}}/>}
+          onClick={()=>go('home')} sx={{color:'text.secondary',borderColor:'divider',mb:1.5}}>
+          Về Trang Chủ
+        </Button>
+        {!downloaded&&<Typography variant="caption" color="text.disabled">⏱ Link tự động mở sau 3 giây</Typography>}
+      </Paper>
+    </Container>
+  );
+}
+
+// ── ADMIN LOGIN ──
+function AdminLoginPage({onLogin}){
+  const [pw,setPw]     = useState('');
+  const [err,setErr]   = useState('');
+  const [busy,setBusy] = useState(false);
+  const submit = async()=>{
+    setBusy(true);setErr('');
+    try{
+      const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+      const d=await r.json();
+      if(r.ok){sessionStorage.setItem('adminToken',d.token);onLogin(d.token);}
+      else setErr(d.error||'Sai mật khẩu');
+    }catch{setErr('Lỗi kết nối');}
+    finally{setBusy(false);}
+  };
+  return(
+    <Box sx={{minHeight:'100vh',background:'linear-gradient(135deg,#0F172A,#1E3A8A)',
+      display:'flex',alignItems:'center',justifyContent:'center',p:2}}>
+      <Paper elevation={0} sx={{p:{xs:4,md:5},maxWidth:400,width:'100%',borderRadius:4}} className="kbv-fadeup">
+        <Box sx={{textAlign:'center',mb:4}}>
+          <Box sx={{width:64,height:64,borderRadius:3,background:'linear-gradient(135deg,#2563EB,#3B82F6)',
+            display:'flex',alignItems:'center',justifyContent:'center',mx:'auto',mb:2,
+            boxShadow:'0 8px 24px rgba(37,99,235,.4)'}}>
+            <FA icon="lock" style={{fontSize:26,color:'#fff'}}/>
+          </Box>
+          <Typography variant="h5" sx={{fontWeight:900}}>Admin KhoBanVe2D</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{mt:.5}}>Đăng nhập để quản lý bản vẽ</Typography>
+        </Box>
+        <TextField fullWidth type="password" label="Mật khẩu admin" value={pw}
+          onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()}
+          InputProps={{startAdornment:<InputAdornment position="start"><FA icon="key" style={{fontSize:14,color:'#94A3B8'}}/></InputAdornment>}}
+          sx={{mb:2}} size="small"/>
+        {err&&<Alert severity="error" sx={{mb:2,borderRadius:2}}>{err}</Alert>}
+        <Button fullWidth variant="contained" size="large" onClick={submit} disabled={busy}
+          startIcon={busy?<CircularProgress size={16} color="inherit"/>:<FA icon="right-to-bracket" style={{fontSize:15}}/>}
+          sx={{py:1.4,fontSize:15,mb:2}}>
+          {busy?'Đang đăng nhập...':'Đăng Nhập'}
+        </Button>
+        <Box sx={{textAlign:'center'}}>
+          <Button href="/" variant="text" size="small" startIcon={<FA icon="arrow-left" style={{fontSize:12}}/>}
+            sx={{color:'text.disabled'}}>Về trang chủ</Button>
+        </Box>
+      </Paper>
+    </Box>
+  );
+}
+
+// ── PRODUCT MODAL ──
+function ProductModal({prod,onClose,onSave,token}){
+  const isEdit = !!prod?._id;
+  const [form,setForm] = useState(prod||{
+    title:'',code:'',category:'kien-truc',subcategory:'',description:'',
+    fileType:'DWG AutoCAD',fileSize:'',fileCount:1,
+    price:0,originalPrice:'',driveFileId:'',rating:5,downloadCount:0,
+    isFree:false,isActive:true,isHot:false,isNew:false,images:[],
+  });
+  const [saving,setSaving]     = useState(false);
+  const [uploading,setUploading] = useState(false);
+  const [imgUrl,setImgUrl]     = useState('');
+  const set = (k,v)=>setForm(f=>({...f,[k]:v}));
+  const uploadImg = async file=>{
+    setUploading(true);
+    try{
+      const fd=new FormData();fd.append('file',file);fd.append('upload_preset','khobanve2d_unsigned');
+      const r=await fetch('https://api.cloudinary.com/v1_1/vietlongbk123/image/upload',{method:'POST',body:fd});
+      const d=await r.json();
+      if(d.secure_url)set('images',[...(form.images||[]),d.secure_url]);
+      else alert('Upload thất bại: '+(d.error?.message||'Unknown'));
+    }catch{alert('Lỗi upload ảnh');}
+    finally{setUploading(false);}
+  };
+  const save = async()=>{
+    if(!form.title)return alert('Vui lòng nhập tên bản vẽ');
+    setSaving(true);
+    try{
+      const url=isEdit?`/api/products?id=${prod._id}`:'/api/products';
+      const body={...form,price:Number(form.price)||0,originalPrice:form.originalPrice?Number(form.originalPrice):null,
+        fileCount:Number(form.fileCount)||1,downloadCount:Number(form.downloadCount)||0,rating:parseFloat(form.rating)||5};
+      const r=await fetch(url,{method:isEdit?'PUT':'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify(body)});
+      const d=await r.json();
+      if(r.ok)onSave();
+      else alert('Lỗi: '+(d.error||'Unknown'));
+    }catch{alert('Lỗi kết nối');}
+    finally{setSaving(false);}
+  };
+  const driveChange = e=>{
+    const val=e.target.value.trim();
+    const m=val.match(/\/d\/([a-zA-Z0-9_-]{20,})/)||val.match(/id=([a-zA-Z0-9_-]{20,})/)||val.match(/^([a-zA-Z0-9_-]{20,})$/);
+    set('driveFileId',m?m[1]:val);
+  };
+  return(
+    <Dialog open fullWidth maxWidth="md" onClose={onClose} PaperProps={{sx:{borderRadius:3}}}>
+      <DialogTitle sx={{display:'flex',justifyContent:'space-between',alignItems:'center',fontWeight:800,pb:0}}>
+        <Box sx={{display:'flex',alignItems:'center',gap:1}}>
+          <FA icon={isEdit?'pen-to-square':'plus-circle'} style={{color:'#2563EB'}}/>
+          {isEdit?'Sửa Bản Vẽ':'Thêm Bản Vẽ Mới'}
+        </Box>
+        <IconButton onClick={onClose} size="small"><FA icon="xmark"/></IconButton>
+      </DialogTitle>
+      <DialogContent dividers sx={{overflowY:'auto'}}>
+        <Grid container spacing={2} sx={{mt:.5}}>
+          <Grid item xs={12} sm={8}>
+            <TextField fullWidth size="small" label="Tên bản vẽ *" value={form.title||''} onChange={e=>set('title',e.target.value)}/>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField fullWidth size="small" label="Mã bản vẽ" value={form.code||''} onChange={e=>set('code',e.target.value)} placeholder="Để trống = tự động"/>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Danh mục</InputLabel>
+              <Select value={form.category||'kien-truc'} label="Danh mục" onChange={e=>set('category',e.target.value)}>
+                {CATS.map(c=><MenuItem key={c.id} value={c.id}><i className={`fa-solid ${c.fa}`} style={{marginRight:8,color:c.color}}/>{c.label}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth size="small" label="Thể loại con" value={form.subcategory||''} onChange={e=>set('subcategory',e.target.value)}/>
+          </Grid>
+          <Grid item xs={12}>
+            <TextField fullWidth size="small" label="Mô tả" value={form.description||''} onChange={e=>set('description',e.target.value)} multiline rows={3}/>
+          </Grid>
+          <Grid item xs={4}><TextField fullWidth size="small" label="Loại file" value={form.fileType||''} onChange={e=>set('fileType',e.target.value)}/></Grid>
+          <Grid item xs={4}><TextField fullWidth size="small" label="Dung lượng" value={form.fileSize||''} onChange={e=>set('fileSize',e.target.value)}/></Grid>
+          <Grid item xs={4}><TextField fullWidth size="small" type="number" label="Số file" value={form.fileCount||1} onChange={e=>set('fileCount',e.target.value)}/></Grid>
+          <Grid item xs={6}><TextField fullWidth size="small" type="number" label="Giá (đ)" value={form.price||0} onChange={e=>set('price',e.target.value)}/></Grid>
+          <Grid item xs={6}><TextField fullWidth size="small" type="number" label="Giá gốc (đ, tùy chọn)" value={form.originalPrice||''} onChange={e=>set('originalPrice',e.target.value)}/></Grid>
+          <Grid item xs={6}><TextField fullWidth size="small" type="number" label="📥 Lượt tải" value={form.downloadCount||0} onChange={e=>set('downloadCount',e.target.value)}/></Grid>
+          <Grid item xs={6}><TextField fullWidth size="small" type="number" label="⭐ Đánh giá (1-5)" value={form.rating||5} inputProps={{min:1,max:5,step:0.1}} onChange={e=>set('rating',e.target.value)}/></Grid>
+          <Grid item xs={12}>
+            <TextField fullWidth size="small" label="Google Drive Link hoặc File ID" onChange={driveChange}
+              defaultValue={form.driveFileId||''} placeholder="Paste link Drive hoặc File ID đều được"
+              InputProps={{startAdornment:<InputAdornment position="start"><FA icon="brands fa-google-drive" style={{fontSize:13,color:'#4285F4'}}/></InputAdornment>}}/>
+            {form.driveFileId&&!form.driveFileId.includes('/')&&(
+              <Typography variant="caption" color="success.main" sx={{display:'flex',alignItems:'center',gap:.5,mt:.5}}>
+                <FA icon="circle-check"/> File ID: <b>{form.driveFileId}</b>
+              </Typography>
+            )}
+          </Grid>
+          <Grid item xs={12}>
+            <Stack direction="row" spacing={2} flexWrap="wrap">
+              {[['isFree','Miễn phí'],['isActive','Hiển thị'],['isHot','🔥 Hot'],['isNew','✦ Mới']].map(([k,l])=>(
+                <FormControlLabel key={k} control={<Checkbox checked={!!form[k]} onChange={e=>set(k,e.target.checked)} size="small"/>}
+                  label={<Typography variant="body2" sx={{fontWeight:600}}>{l}</Typography>}/>
+              ))}
+            </Stack>
+          </Grid>
+          {/* Images */}
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" sx={{fontWeight:700,mb:1}}>
+              <FA icon="images" style={{marginRight:6,color:'#2563EB'}}/> Ảnh demo ({(form.images||[]).length} ảnh)
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{mb:1.5,gap:1}}>
+              {(form.images||[]).map((url,i)=>(
+                <Box key={i} sx={{position:'relative',width:80,height:60,borderRadius:1.5,overflow:'hidden',
+                  border:'1.5px solid',borderColor:'divider',flexShrink:0}}>
+                  <Box component="img" src={url} alt="" sx={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                  <IconButton size="small" onClick={()=>set('images',(form.images||[]).filter((_,j)=>j!==i))}
+                    sx={{position:'absolute',top:1,right:1,bgcolor:'rgba(239,68,68,.9)',color:'#fff',
+                      width:18,height:18,'& .fa-xmark':{fontSize:10}}}>
+                    <FA icon="xmark" style={{fontSize:10}}/>
+                  </IconButton>
+                </Box>
+              ))}
+            </Stack>
+            <Stack direction={{xs:'column',sm:'row'}} spacing={1}>
+              <Button component="label" variant="outlined" size="small" disabled={uploading}
+                startIcon={uploading?<CircularProgress size={13}/>:<FA icon="cloud-arrow-up" style={{fontSize:13}}/>}>
+                {uploading?'Đang upload...':'Upload ảnh (Cloudinary)'}
+                <input type="file" accept="image/*" multiple hidden onChange={e=>{for(const f of e.target.files)uploadImg(f);e.target.value='';}} disabled={uploading}/>
+              </Button>
+              <TextField size="small" value={imgUrl} onChange={e=>setImgUrl(e.target.value)}
+                placeholder="Hoặc paste URL ảnh..." sx={{flex:1}}
+                InputProps={{endAdornment:<InputAdornment position="end">
+                  <IconButton size="small" onClick={()=>{if(imgUrl.trim()){set('images',[...(form.images||[]),imgUrl.trim()]);setImgUrl('');}}} >
+                    <FA icon="plus" style={{fontSize:12}}/>
+                  </IconButton>
+                </InputAdornment>}}/>
+            </Stack>
+          </Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions sx={{p:2.5}}>
+        <Button onClick={onClose} variant="outlined" sx={{color:'text.secondary',borderColor:'divider'}}>Hủy</Button>
+        <Button onClick={save} disabled={saving} variant="contained" size="large"
+          startIcon={saving?<CircularProgress size={15} color="inherit"/>:<FA icon={isEdit?'floppy-disk':'plus'} style={{fontSize:14}}/>}>
+          {saving?'Đang lưu...':(isEdit?'Lưu Thay Đổi':'Thêm Bản Vẽ')}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ── BATCH UPLOAD TAB ──
+function BatchUploadTab({token}){
+  const [files,setFiles]     = useState([]);
+  const [cat,setCat]         = useState('kien-truc');
+  const [defPrice,setDefPrice] = useState(0);
+  const [rows,setRows]       = useState([]);
+  const [busy,setBusy]       = useState(false);
+  const [creating,setCreating] = useState(false);
+  const [done,setDone]       = useState([]);
+  const [step,setStep]       = useState(1);
+  const fmt = b=>b<1024?b+'B':b<1048576?(b/1024).toFixed(0)+'kB':(b/1048576).toFixed(1)+'MB';
+  const doTranslate = filename=>{
+    const clean=filename.replace(/\.(zip|rar|7z|dwg|dxf|pdf|skp|exe)$/i,'').replace(/[_\-\.]+/g,' ').replace(/\bfree\s*download\b/gi,'').replace(/\bcad\b/gi,'').replace(/\bfile\b/gi,'').replace(/\s+/g,' ').trim();
+    return fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q='+encodeURIComponent(clean)).then(r=>r.json()).then(d=>d[0]?.map(x=>x[0]).filter(Boolean).join('')||clean);
+  };
+  const start=()=>{
+    if(!files.length)return alert('Chưa chọn file!');
+    setBusy(true);setStep(2);
+    const nr=Array.from(files).map(f=>({file:f,filename:f.name,title:'',translating:true,cat,price:defPrice,fileType:f.name.split('.').pop().toUpperCase(),fileSize:fmt(f.size),driveFileId:''}));
+    setRows([...nr]);
+    (async()=>{
+      for(let i=0;i<nr.length;i++){
+        try{nr[i].title=await doTranslate(nr[i].filename);}
+        catch{nr[i].title=nr[i].filename.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');}
+        nr[i].translating=false;setRows([...nr]);
+        if(i<nr.length-1)await new Promise(r=>setTimeout(r,300));
+      }
+      setBusy(false);
+    })();
+  };
+  const upd=(i,k,v)=>{const r=[...rows];r[i]={...r[i],[k]:v};setRows(r);};
+  const createAll=async()=>{
+    setCreating(true);const res=[];
+    for(const row of rows){
+      try{
+        const r=await fetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+          body:JSON.stringify({title:row.title,category:row.cat,fileType:row.fileType,fileSize:row.fileSize,fileCount:1,price:Number(row.price)||0,driveFileId:row.driveFileId||'',isActive:false,isNew:true,downloadCount:0,rating:5})});
+        const d=await r.json();
+        res.push({title:row.title,ok:r.ok,error:d.error});
+      }catch(e){res.push({title:row.title,ok:false,error:e.message});}
+    }
+    setDone(res);setCreating(false);setStep(3);
+  };
+  return(<Box>
+    {/* Step 1 */}
+    <Paper elevation={0} sx={{p:3,borderRadius:3,border:'1px solid',borderColor:'divider',mb:2}}>
+      <Typography variant="h6" sx={{fontWeight:800,mb:2.5}}>
+        <FA icon="cloud-arrow-up" style={{marginRight:8,color:'#2563EB'}}/> Bước 1 — Chọn File & Danh Mục
+      </Typography>
+      <Grid container spacing={2} sx={{mb:2}}>
+        <Grid item xs={12} sm={5}>
+          <Typography variant="caption" sx={{fontWeight:700,color:'text.secondary',display:'block',mb:.7}}>
+            <FA icon="folder-open" style={{marginRight:5}}/> Chọn nhiều file
+          </Typography>
+          <Button variant="outlined" component="label" fullWidth startIcon={<FA icon="upload" style={{fontSize:13}}/>}>
+            Chọn File (.zip, .rar, .dwg...)
+            <input type="file" hidden multiple accept=".zip,.rar,.7z,.dwg,.dxf,.pdf,.skp" onChange={e=>{setFiles(e.target.files);setRows([]);setStep(1);}}/>
+          </Button>
+          {files.length>0&&<Typography variant="caption" color="success.main" sx={{display:'block',mt:.7}}>
+            <FA icon="circle-check" style={{marginRight:4}}/> Đã chọn {files.length} file
+          </Typography>}
+        </Grid>
+        <Grid item xs={6} sm={4}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Danh mục mặc định</InputLabel>
+            <Select value={cat} label="Danh mục mặc định" onChange={e=>setCat(e.target.value)}>
+              {CATS.map(c=><MenuItem key={c.id} value={c.id}><i className={`fa-solid ${c.fa}`} style={{marginRight:8,color:c.color}}/>{c.label}</MenuItem>)}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <TextField fullWidth size="small" type="number" label="Giá mặc định (đ)" value={defPrice} onChange={e=>setDefPrice(Number(e.target.value))}/>
+        </Grid>
+      </Grid>
+      <Button variant="contained" size="large" onClick={start} disabled={!files.length||busy}
+        startIcon={busy?<CircularProgress size={16} color="inherit"/>:<FA icon="language" style={{fontSize:16}}/>}
+        sx={{background:'linear-gradient(135deg,#7C3AED,#9333EA)',':hover':{background:'linear-gradient(135deg,#6D28D9,#7C3AED)'}}}>
+        {busy?'Đang dịch...':'🌐 Dịch Tên & Xem Trước'}
+      </Button>
+    </Paper>
+    {/* Step 2 */}
+    {rows.length>0&&step===2&&(
+    <Paper elevation={0} sx={{borderRadius:3,border:'1px solid',borderColor:'divider',mb:2,overflow:'hidden'}}>
+      <Box sx={{px:3,py:2,borderBottom:'1px solid',borderColor:'divider',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <Typography variant="h6" sx={{fontWeight:800}}>
+          <FA icon="pen-to-square" style={{marginRight:8,color:'#2563EB'}}/> Bước 2 — Xem Trước ({rows.length} sản phẩm)
+        </Typography>
+        <Typography variant="caption" color="text.secondary">Chỉnh sửa trước khi tạo</Typography>
+      </Box>
+      <TableContainer>
+        <Table size="small">
+          <TableHead><TableRow sx={{bgcolor:'rgba(0,0,0,.02)'}}>
+            {['#','Tên file','Tiêu đề tiếng Việt','Danh mục','Giá (đ)','Drive File ID',''].map(h=>(
+              <TableCell key={h} sx={{fontWeight:700,fontSize:11,color:'text.secondary',textTransform:'uppercase',letterSpacing:.4,whiteSpace:'nowrap'}}>{h}</TableCell>
+            ))}
+          </TableRow></TableHead>
+          <TableBody>{rows.map((row,i)=>(
+            <TableRow key={i} hover>
+              <TableCell sx={{color:'text.disabled',fontWeight:700,width:30}}>{i+1}</TableCell>
+              <TableCell sx={{maxWidth:160}}>
+                <Typography variant="caption" sx={{fontFamily:'monospace',color:'text.secondary',wordBreak:'break-all',display:'block'}}>{row.filename}</Typography>
+                <Typography variant="caption" color="text.disabled">{row.fileSize}</Typography>
+              </TableCell>
+              <TableCell sx={{minWidth:220}}>
+                {row.translating
+                  ?<Box sx={{display:'flex',alignItems:'center',gap:1}}><CircularProgress size={14}/><Typography variant="caption" color="secondary">Đang dịch...</Typography></Box>
+                  :<TextField size="small" fullWidth value={row.title} onChange={e=>upd(i,'title',e.target.value)} variant="outlined" sx={{'& .MuiInputBase-input':{fontSize:12,py:.7}}}/>
+                }
+              </TableCell>
+              <TableCell sx={{minWidth:140}}>
+                <FormControl size="small" fullWidth>
+                  <Select value={row.cat} onChange={e=>upd(i,'cat',e.target.value)} sx={{'& .MuiSelect-select':{py:.7,fontSize:12}}}>
+                    {CATS.map(c=><MenuItem key={c.id} value={c.id} sx={{fontSize:12}}>{c.emoji} {c.label}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </TableCell>
+              <TableCell sx={{minWidth:100}}><TextField size="small" type="number" value={row.price} onChange={e=>upd(i,'price',e.target.value)} sx={{'& .MuiInputBase-input':{fontSize:12,py:.7}}}/></TableCell>
+              <TableCell sx={{minWidth:170}}><TextField size="small" value={row.driveFileId} onChange={e=>upd(i,'driveFileId',e.target.value)} placeholder="File ID..." sx={{'& .MuiInputBase-input':{fontSize:11,py:.7,fontFamily:'monospace'}}}/></TableCell>
+              <TableCell><IconButton size="small" color="error" onClick={()=>setRows(rows.filter((_,j)=>j!==i))}><FA icon="trash" style={{fontSize:12}}/></IconButton></TableCell>
+            </TableRow>
+          ))}</TableBody>
+        </Table>
+      </TableContainer>
+      <Box sx={{px:3,py:2,borderTop:'1px solid',borderColor:'divider',bgcolor:'rgba(0,0,0,.02)',
+        display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:1}}>
+        <Typography variant="caption" color="text.secondary">
+          <FA icon="circle-info" style={{marginRight:4}}/> Sản phẩm sẽ tạo ở trạng thái <b>Ẩn</b> — bật lên sau khi review
+        </Typography>
+        <Button variant="contained" color="success" size="large" onClick={createAll} disabled={creating||busy}
+          startIcon={creating?<CircularProgress size={15} color="inherit"/>:<FA icon="plus" style={{fontSize:14}}/>}>
+          {creating?'Đang tạo...':'Tạo '+rows.length+' Sản Phẩm'}
+        </Button>
+      </Box>
+    </Paper>)}
+    {/* Step 3 */}
+    {step===3&&done.length>0&&(
+    <Paper elevation={0} sx={{p:3,borderRadius:3,border:'1px solid',borderColor:'divider'}}>
+      <Typography variant="h6" sx={{fontWeight:800,mb:2}}>
+        <FA icon="circle-check" style={{marginRight:8,color:'#059669'}}/> Kết Quả
+      </Typography>
+      <Stack direction="row" spacing={2} sx={{mb:2.5}}>
+        <Paper elevation={0} sx={{p:2,borderRadius:2,bgcolor:'rgba(5,150,105,.06)',border:'1px solid rgba(5,150,105,.2)',textAlign:'center',minWidth:100}}>
+          <Typography variant="h5" sx={{fontWeight:900,color:'success.main'}}>{done.filter(d=>d.ok).length}</Typography>
+          <Typography variant="caption" color="text.secondary">Thành công</Typography>
+        </Paper>
+        {done.filter(d=>!d.ok).length>0&&<Paper elevation={0} sx={{p:2,borderRadius:2,bgcolor:'rgba(239,68,68,.06)',border:'1px solid rgba(239,68,68,.2)',textAlign:'center',minWidth:100}}>
+          <Typography variant="h5" sx={{fontWeight:900,color:'error.main'}}>{done.filter(d=>!d.ok).length}</Typography>
+          <Typography variant="caption" color="text.secondary">Thất bại</Typography>
+        </Paper>}
+      </Stack>
+      {done.map((d,i)=>(
+        <Box key={i} sx={{display:'flex',gap:1,py:.8,borderBottom:'1px dashed',borderColor:'divider',alignItems:'center'}}>
+          <FA icon={d.ok?'circle-check':'circle-xmark'} style={{color:d.ok?'#059669':'#EF4444',fontSize:14,flexShrink:0}}/>
+          <Typography variant="body2" sx={{flex:1,color:d.ok?'text.primary':'error.main'}}>{d.title}</Typography>
+          {!d.ok&&<Typography variant="caption" color="error.main">{d.error}</Typography>}
+        </Box>
+      ))}
+      <Alert severity="warning" sx={{mt:2,borderRadius:2}} icon={<FA icon="lightbulb" style={{fontSize:16}}/>}>
+        <b>Bước tiếp theo:</b> Vào tab Sản Phẩm → thêm ảnh + Drive ID + giá → bật Hiển thị
+      </Alert>
+      <Button sx={{mt:2}} variant="outlined" startIcon={<FA icon="rotate-left" style={{fontSize:13}}/>}
+        onClick={()=>{setStep(1);setFiles([]);setRows([]);setDone([]);}}>
+        Upload tiếp
+      </Button>
+    </Paper>)}
+  </Box>);
+}
+
+// ── ADMIN DASHBOARD ──
+function AdminDashboard({token,onLogout}){
+  const [tab,setTab]       = useState(0);
+  const [prods,setProds]   = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [modal,setModal]   = useState(null);
+  const [deleting,setDeleting] = useState(null);
+  const [search,setSearch] = useState('');
+  const [catF,setCatF]     = useState('all');
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const load=async(silent=false)=>{
+    if(!silent)setLoading(true);
+    try{const r=await fetch('/api/products?admin=1',{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(Array.isArray(d))setProds(d);}
+    catch{}finally{if(!silent)setLoading(false);}
+  };
+  useEffect(()=>{load();const iv=setInterval(()=>load(true),30000);return()=>clearInterval(iv);},[]);
+  const del=async(id,title)=>{
+    if(!confirm(`Xóa "${title}"?`))return;
+    setDeleting(id);
+    try{const r=await fetch(`/api/products?id=${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});if(r.ok)load();}
+    finally{setDeleting(null);}
+  };
+  const filtered=prods.filter(p=>{
+    const mc=catF==='all'||p.category===catF;
+    const mq=!search||p.title?.toLowerCase().includes(search.toLowerCase())||p.code?.toLowerCase().includes(search.toLowerCase());
+    return mc&&mq;
+  });
+  const totalDl=prods.reduce((s,p)=>s+(p.downloadCount||0),0);
+  const paidProds=prods.filter(p=>!p.isFree&&p.price>0);
+  const totalRev=paidProds.reduce((s,p)=>s+(p.downloadCount||0)*p.price,0);
+  const topProds=[...prods].sort((a,b)=>(b.downloadCount||0)-(a.downloadCount||0));
+  const STATS=[
+    {n:prods.length,l:'Tổng bản vẽ',fa:'box-open',c:'primary'},
+    {n:totalDl.toLocaleString('vi-VN'),l:'Tổng lượt tải',fa:'download',c:'success'},
+    {n:vnd(totalRev),l:'Doanh thu ước tính',fa:'sack-dollar',c:'warning'},
+    {n:prods.filter(p=>p.isFree).length,l:'Sản phẩm miễn phí',fa:'gift',c:'secondary'},
+  ];
+  return(<Box sx={{minHeight:'100vh',bgcolor:'background.default'}}>
+    {/* Header */}
+    <AppBar position="sticky" elevation={0} sx={{bgcolor:'#0F172A',borderBottom:'1px solid rgba(255,255,255,.08)'}}>
+      <Toolbar sx={{gap:1}}>
+        <Box sx={{display:'flex',alignItems:'center',gap:1.5,flex:1}}>
+          <Box sx={{width:32,height:32,borderRadius:1.5,background:'linear-gradient(135deg,#2563EB,#3B82F6)',
+            display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <FA icon="drafting-compass" style={{color:'#fff',fontSize:15}}/>
+          </Box>
+          <Typography sx={{fontWeight:900,color:'#fff',fontSize:15}}>
+            KhoBanVe<span style={{color:'#3B82F6'}}>2D</span>
+            <Box component="span" sx={{color:'rgba(255,255,255,.4)',fontSize:11,fontWeight:400,ml:1}}>Admin Panel</Box>
+          </Typography>
+        </Box>
+        <Button href="/" target="_blank" size="small" startIcon={<FA icon="arrow-up-right-from-square" style={{fontSize:11}}/>}
+          sx={{color:'rgba(255,255,255,.5)',display:{xs:'none',sm:'flex'}}}>Website</Button>
+        <Button onClick={onLogout} variant="contained" color="error" size="small"
+          startIcon={<FA icon="right-from-bracket" style={{fontSize:11}}/>}>
+          {isMobile?'':'Đăng xuất'}
+        </Button>
+      </Toolbar>
+    </AppBar>
+    <Container maxWidth="xl" sx={{py:3}}>
+      {/* Stats */}
+      <Grid container spacing={2} sx={{mb:3}}>
+        {STATS.map(s=>(
+          <Grid item xs={6} md={3} key={s.l}>
+            <Paper elevation={0} sx={{p:2.5,borderRadius:3,border:'1px solid',borderColor:'divider',
+              borderLeft:'4px solid',borderLeftColor:`${s.c}.main`}}>
+              <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{fontWeight:600,display:'block',mb:.5}}>{s.l}</Typography>
+                  <Typography variant="h5" sx={{fontWeight:900,color:'text.primary'}}>{s.n}</Typography>
+                </Box>
+                <Box sx={{width:40,height:40,borderRadius:2,bgcolor:`rgba(0,0,0,.04)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <FA icon={s.fa} style={{fontSize:18,color:s.c==='primary'?'#2563EB':s.c==='success'?'#059669':s.c==='warning'?'#F59E0B':'#7C3AED'}}/>
+                </Box>
+              </Box>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+      {/* Tabs */}
+      <Paper elevation={0} sx={{borderRadius:3,border:'1px solid',borderColor:'divider',overflow:'hidden'}}>
+        <Tabs value={tab} onChange={(_,v)=>setTab(v)} sx={{borderBottom:'1px solid',borderColor:'divider',bgcolor:'rgba(0,0,0,.01)'}}>
+          <Tab icon={<FA icon="box-open" style={{fontSize:14}}/>} iconPosition="start" label="Sản Phẩm"/>
+          <Tab icon={<FA icon="chart-bar" style={{fontSize:14}}/>} iconPosition="start" label="Doanh Thu & Lượt Tải"/>
+          <Tab icon={<FA icon="cloud-arrow-up" style={{fontSize:14}}/>} iconPosition="start" label="Upload Hàng Loạt"/>
+        </Tabs>
+        <Box sx={{p:{xs:2,md:3}}}>
+          {/* Tab 0: Products */}
+          {tab===0&&<>
+            <Box sx={{display:'flex',gap:1.5,mb:2,flexWrap:'wrap'}}>
+              <TextField size="small" placeholder="Tìm tên, mã..." value={search}
+                onChange={e=>setSearch(e.target.value)} sx={{flex:1,minWidth:200}}
+                InputProps={{startAdornment:<InputAdornment position="start"><FA icon="magnifying-glass" style={{fontSize:13,color:'#94A3B8'}}/></InputAdornment>}}/>
+              <FormControl size="small" sx={{minWidth:160}}>
+                <Select value={catF} onChange={e=>setCatF(e.target.value)} displayEmpty>
+                  <MenuItem value="all">Tất cả danh mục</MenuItem>
+                  {CATS.map(c=><MenuItem key={c.id} value={c.id}><i className={`fa-solid ${c.fa}`} style={{marginRight:8,color:c.color}}/>{c.label}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <Button variant="outlined" onClick={()=>load()} startIcon={<FA icon="rotate" style={{fontSize:13}}/>}>Làm mới</Button>
+              <Button variant="contained" onClick={()=>setModal('add')} startIcon={<FA icon="plus" style={{fontSize:13}}/>}>Thêm bản vẽ</Button>
+            </Box>
+            {loading
+              ?<Box sx={{textAlign:'center',py:6}}><CircularProgress/></Box>
+              :filtered.length===0
+                ?<Box sx={{textAlign:'center',py:8}}><FA icon="box-open" style={{fontSize:48,color:'#CBD5E1'}}/><Typography color="text.disabled" sx={{mt:1}}>Chưa có bản vẽ nào</Typography></Box>
+                :<TableContainer>
+                  <Table>
+                    <TableHead><TableRow sx={{bgcolor:'rgba(0,0,0,.02)'}}>
+                      {['#','Mã','Tên Bản Vẽ','Danh Mục','Giá','📥','Files','Trạng thái',''].map(h=>(
+                        <TableCell key={h} sx={{fontWeight:700,fontSize:11,color:'text.secondary',textTransform:'uppercase',letterSpacing:.4,whiteSpace:'nowrap'}}>{h}</TableCell>
+                      ))}
+                    </TableRow></TableHead>
+                    <TableBody>{filtered.map((p,i)=>{
+                      const cat=catOf(p.category);
+                      return(<TableRow key={p._id} hover>
+                        <TableCell sx={{color:'text.disabled',fontWeight:700,fontSize:12,width:32}}>{i+1}</TableCell>
+                        <TableCell sx={{fontFamily:'monospace',fontSize:11,color:'text.secondary'}}>{p.code||'—'}</TableCell>
+                        <TableCell sx={{maxWidth:240}}>
+                          <Box sx={{display:'flex',alignItems:'center',gap:1}}>
+                            {p.images?.[0]&&<Box component="img" src={p.images[0]} sx={{width:38,height:28,borderRadius:1,objectFit:'cover',flexShrink:0}}/>}
+                            <Box>
+                              <Typography variant="body2" sx={{fontWeight:600,lineHeight:1.4,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{p.title}</Typography>
+                              {p.subcategory&&<Typography variant="caption" color="text.disabled">{p.subcategory}</Typography>}
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell><Chip label={<><i className={`fa-solid ${cat.fa}`} style={{fontSize:10,marginRight:4}}/>{cat.label}</>} size="small" sx={{bgcolor:cat.bg,color:cat.color,fontWeight:700}}/></TableCell>
+                        <TableCell sx={{whiteSpace:'nowrap'}}>
+                          {p.isFree?<Typography variant="body2" color="success.main" sx={{fontWeight:700}}>Miễn phí</Typography>
+                            :<Typography variant="body2" color="primary.main" sx={{fontWeight:700}}>{vnd(p.price||0)}</Typography>}
+                        </TableCell>
+                        <TableCell><Chip label={<><FA icon="download" style={{fontSize:9,marginRight:3}}/>{(p.downloadCount||0).toLocaleString()}</>} size="small" sx={{bgcolor:'rgba(2,132,199,.08)',color:'#0284C7',fontWeight:700}}/></TableCell>
+                        <TableCell sx={{fontSize:12,color:'text.secondary'}}>{p.fileCount||0}</TableCell>
+                        <TableCell><Chip label={p.isActive?'Hiển thị':'Ẩn'} size="small" color={p.isActive?'success':'error'} variant="outlined" sx={{fontWeight:600}}/></TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={.5}>
+                            <IconButton size="small" onClick={()=>setModal(p)} sx={{color:'primary.main',bgcolor:'rgba(37,99,235,.06)'}}><FA icon="pen-to-square" style={{fontSize:13}}/></IconButton>
+                            <IconButton size="small" onClick={()=>del(p._id,p.title)} disabled={deleting===p._id} sx={{color:'error.main',bgcolor:'rgba(239,68,68,.06)'}}>{deleting===p._id?<CircularProgress size={12}/>:<FA icon="trash" style={{fontSize:13}}/>}</IconButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>);
+                    })}</TableBody>
+                  </Table>
+                </TableContainer>
+            }
+            <Typography variant="caption" color="text.disabled" sx={{display:'block',textAlign:'center',mt:1.5}}>{filtered.length} bản vẽ • tổng {prods.length}</Typography>
+          </>}
+          {/* Tab 1: Revenue */}
+          {tab===1&&<>
+            <Grid container spacing={2} sx={{mb:3}}>
+              {[
+                ['sack-dollar','Doanh thu ước tính',vnd(totalRev),'lượt tải × giá','#EA580C'],
+                ['download','Tổng lượt tải',totalDl.toLocaleString('vi-VN'),'tất cả sản phẩm','#0284C7'],
+                ['trophy',`Top: ${topProds[0]?.title?.slice(0,20)||'—'}`,`${topProds[0]?.downloadCount||0} lượt`,'bán chạy nhất','#059669'],
+                ['boxes-stacked',`${paidProds.length} sp có phí`,'Sản phẩm','có giá bán','#7C3AED'],
+              ].map(([ic,l,v,sub,c])=>(
+                <Grid item xs={6} md={3} key={l}>
+                  <Paper elevation={0} sx={{p:2,borderRadius:2,border:'1px solid',borderColor:'divider',borderTop:`3px solid ${c}`}}>
+                    <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" sx={{fontWeight:600,display:'block',mb:.3}}>{l}</Typography>
+                        <Typography variant="h6" sx={{fontWeight:800,color:'text.primary'}}>{v}</Typography>
+                        <Typography variant="caption" color="text.disabled">{sub}</Typography>
+                      </Box>
+                      <FA icon={ic} style={{fontSize:24,color:c}}/>
+                    </Box>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+            <Box sx={{display:'flex',justifyContent:'space-between',mb:1.5}}>
+              <Typography variant="subtitle1" sx={{fontWeight:800}}>
+                <FA icon="chart-bar" style={{marginRight:8,color:'#2563EB'}}/> Chi Tiết Lượt Tải
+              </Typography>
+              <Button size="small" startIcon={<FA icon="rotate" style={{fontSize:12}}/>} onClick={()=>load()}>Làm mới</Button>
+            </Box>
+            <TableContainer>
+              <Table>
+                <TableHead><TableRow sx={{bgcolor:'rgba(0,0,0,.02)'}}>
+                  {['#','Tên Bản Vẽ','Danh Mục','Giá','Lượt Tải','Doanh Thu Ước Tính'].map(h=>(
+                    <TableCell key={h} sx={{fontWeight:700,fontSize:11,color:'text.secondary',textTransform:'uppercase',letterSpacing:.4}}>{h}</TableCell>
+                  ))}
+                </TableRow></TableHead>
+                <TableBody>{topProds.map((p,i)=>{
+                  const cat=catOf(p.category);const dl=p.downloadCount||0;const rev=p.isFree?0:dl*(p.price||0);
+                  const pct=totalDl>0?Math.round(dl/totalDl*100):0;
+                  return(<TableRow key={p._id} hover>
+                    <TableCell sx={{fontWeight:700,color:'text.disabled',width:36}}>{i+1}</TableCell>
+                    <TableCell sx={{maxWidth:260}}>
+                      <Typography variant="body2" sx={{fontWeight:600,lineHeight:1.4,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{p.title}</Typography>
+                      <Box sx={{mt:.5,display:'flex',alignItems:'center',gap:.5}}>
+                        <LinearProgress variant="determinate" value={pct} sx={{flex:1,height:3,borderRadius:2,bgcolor:'rgba(0,0,0,.06)','& .MuiLinearProgress-bar':{bgcolor:'primary.main'}}}/>
+                        <Typography variant="caption" color="text.disabled" sx={{fontSize:10}}>{pct}%</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell><Chip label={<><i className={`fa-solid ${cat.fa}`} style={{fontSize:10,marginRight:4}}/>{cat.label}</>} size="small" sx={{bgcolor:cat.bg,color:cat.color,fontWeight:700}}/></TableCell>
+                    <TableCell sx={{whiteSpace:'nowrap'}}>{p.isFree?<Typography variant="body2" color="success.main" sx={{fontWeight:700}}>Miễn phí</Typography>:<Typography variant="body2" color="primary.main" sx={{fontWeight:700}}>{vnd(p.price||0)}</Typography>}</TableCell>
+                    <TableCell><Chip label={dl.toLocaleString()} size="small" sx={{bgcolor:'rgba(2,132,199,.08)',color:'#0284C7',fontWeight:800}}/></TableCell>
+                    <TableCell sx={{fontWeight:700,color:rev>0?'success.main':'text.disabled'}}>{rev>0?vnd(rev):'—'}</TableCell>
+                  </TableRow>);
+                })}</TableBody>
+              </Table>
+            </TableContainer>
+            <Typography variant="caption" color="text.disabled" sx={{display:'block',mt:1,textAlign:'right'}}>
+              * Doanh thu ước tính = lượt tải × giá niêm yết
+            </Typography>
+          </>}
+          {/* Tab 2: Batch */}
+          {tab===2&&<BatchUploadTab token={token}/>}
+        </Box>
+      </Paper>
+    </Container>
+    {/* Product Modal */}
+    {modal&&<ProductModal prod={modal==='add'?null:modal} token={token} onClose={()=>setModal(null)} onSave={()=>{setModal(null);load();}}/>}
+  </Box>);
+}
+
+// ── ADMIN PAGE ──
+function AdminPage(){
+  const [token,setToken] = useState(()=>sessionStorage.getItem('adminToken')||'');
+  const logout=()=>{sessionStorage.removeItem('adminToken');setToken('');};
+  if(!token) return <AdminLoginPage onLogin={setToken}/>;
+  return <AdminDashboard token={token} onLogout={logout}/>;
+}
+
+// ── APP ──
+function App(){
+  if(window.location.pathname.startsWith('/admin')) return <AdminPage/>;
+  const [page,setPage]         = useState('home');
+  const [catFilter,setCatFilter] = useState('all');
+  const [query,setQuery]       = useState('');
+  const [prod,setProd]         = useState(null);
+  const [order,setOrder]       = useState(null);
+  const [payState,setPayState] = useState('waiting');
+  const {prods}                = useProducts();
+  const isMobile               = useMediaQuery(theme.breakpoints.down('sm'));
+  const [botNav,setBotNav]     = useState(0);
+  const go = useCallback((p,data=null)=>{
+    if(data)setProd(data);
+    setPage(p);window.scrollTo(0,0);
+    if(p==='home')setBotNav(0);if(p==='shop')setBotNav(1);
+  },[]);
+  const buy = useCallback(p=>{
+    const oid=genOid();setOrder({id:oid,prod:p});setPayState('waiting');setPage('pay');window.scrollTo(0,0);
+  },[]);
+  return(
+    <ThemeProvider theme={theme}>
+      <CssBaseline/>
+      <NavBar page={page} go={go} query={query} setQuery={setQuery}/>
+      <Box component="main" sx={{pb:{xs:7,sm:0}}}>
+        {page==='home'&&<HomePage go={go} prods={prods}/>}
+        {page==='shop'&&<ShopPage go={go} prods={prods} catFilter={catFilter} setCatFilter={setCatFilter} query={query} setQuery={setQuery} buy={buy}/>}
+        {page==='detail'&&<DetailPage prod={prod} go={go} buy={buy} prods={prods}/>}
+        {page==='pay'&&<PayPage order={order} payState={payState} setPayState={setPayState} go={go}/>}
+        {page==='success'&&<SuccessPage order={order} go={go}/>}
+      </Box>
+      {/* Bottom nav mobile */}
+      {isMobile&&page!=='pay'&&page!=='success'&&(
+        <Paper elevation={4} sx={{position:'fixed',bottom:0,left:0,right:0,zIndex:100,borderTop:'1px solid',borderColor:'divider'}}>
+          <BottomNavigation value={botNav} onChange={(_,v)=>{setBotNav(v);go(v===0?'home':'shop');}}>
+            <BottomNavigationAction label="Trang Chủ" icon={<FA icon="house" style={{fontSize:18}}/>}/>
+            <BottomNavigationAction label="Kho Bản Vẽ" icon={<FA icon="store" style={{fontSize:18}}/>}/>
+          </BottomNavigation>
+        </Paper>
+      )}
+    </ThemeProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
