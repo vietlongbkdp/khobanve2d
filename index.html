@@ -58,6 +58,72 @@ const FA = ({icon,style,className='',...p}) => <i className={`fa-solid fa-${icon
 // Zalo icon màu (icons8)
 const ZaloIcon = ({size=22,style}) => <img src="https://img.icons8.com/color/48/zalo.png" width={size} height={size} alt="zalo" style={{verticalAlign:'-0.3em',...style}}/>;
 
+// ══ SVG: Hero drafting illustration (compass, ruler, blueprint sheet) ══
+const HeroBlueprintSVG = ({style}) => (
+  <svg viewBox="0 0 420 420" style={style} xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bpPaper" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#1E3A8A" stopOpacity=".55"/>
+        <stop offset="100%" stopColor="#0F2A6B" stopOpacity=".25"/>
+      </linearGradient>
+      <linearGradient id="bpLine" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stopColor="#60A5FA"/>
+        <stop offset="100%" stopColor="#38BDF8"/>
+      </linearGradient>
+    </defs>
+    {/* paper sheet */}
+    <rect x="60" y="50" width="300" height="230" rx="6" fill="url(#bpPaper)" stroke="#3B82F6" strokeOpacity=".4" strokeWidth="1.5"/>
+    {/* blueprint grid lines */}
+    {[0,1,2,3,4,5].map(i=><line key={'h'+i} x1="60" y1={90+i*32} x2="360" y2={90+i*32} stroke="#3B82F6" strokeOpacity=".18" strokeWidth="1"/>)}
+    {[0,1,2,3,4,5,6,7].map(i=><line key={'v'+i} x1={90+i*32} y1="50" x2={90+i*32} y2="280" stroke="#3B82F6" strokeOpacity=".18" strokeWidth="1"/>)}
+    {/* floor plan drawing */}
+    <rect x="110" y="110" width="120" height="90" fill="none" stroke="url(#bpLine)" strokeWidth="2.5"/>
+    <line x1="170" y1="110" x2="170" y2="200" stroke="url(#bpLine)" strokeWidth="2"/>
+    <rect x="230" y="130" width="70" height="60" fill="none" stroke="#38BDF8" strokeWidth="2" strokeDasharray="4 3"/>
+    <circle cx="150" cy="225" r="16" fill="none" stroke="#60A5FA" strokeWidth="2"/>
+    <path d="M150 209 A16 16 0 0 1 166 225" fill="none" stroke="#60A5FA" strokeWidth="2"/>
+    {/* dimension lines */}
+    <line x1="110" y1="245" x2="230" y2="245" stroke="#94A3B8" strokeWidth="1"/>
+    <line x1="110" y1="240" x2="110" y2="250" stroke="#94A3B8" strokeWidth="1"/>
+    <line x1="230" y1="240" x2="230" y2="250" stroke="#94A3B8" strokeWidth="1"/>
+    <text x="165" y="262" fill="#94A3B8" fontSize="11" fontFamily="monospace">5400</text>
+    {/* compass tool */}
+    <g transform="translate(295,235) rotate(15)">
+      <circle cx="0" cy="0" r="5" fill="#F59E0B"/>
+      <line x1="0" y1="0" x2="-8" y2="42" stroke="#FBBF24" strokeWidth="3" strokeLinecap="round"/>
+      <line x1="0" y1="0" x2="22" y2="36" stroke="#FBBF24" strokeWidth="3" strokeLinecap="round"/>
+      <circle cx="-8" cy="42" r="2.5" fill="#FBBF24"/>
+    </g>
+    {/* pencil */}
+    <g transform="translate(75,90) rotate(-35)">
+      <rect x="0" y="0" width="10" height="62" rx="2" fill="#38BDF8"/>
+      <path d="M0 62 L10 62 L5 74 Z" fill="#F1F5F9"/>
+    </g>
+    {/* floating small gear top-right */}
+    <g transform="translate(345,75)" opacity=".85">
+      <circle r="14" fill="none" stroke="#60A5FA" strokeWidth="2.5"/>
+      <circle r="5" fill="#60A5FA"/>
+      {[0,60,120,180,240,300].map(a=>(
+        <rect key={a} x="-2.5" y="-19" width="5" height="8" fill="#60A5FA" transform={`rotate(${a})`}/>
+      ))}
+    </g>
+  </svg>
+);
+
+// ══ SVG: Empty state illustration (open folder, no results) ══
+const EmptyStateSVG = ({style,size=160}) => (
+  <svg viewBox="0 0 200 160" width={size} height={size*0.8} style={style} xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="100" cy="140" rx="70" ry="10" fill="#2563EB" opacity=".06"/>
+    <path d="M30 60 L75 60 L88 45 L150 45 L150 110 L30 110 Z" fill="#DBEAFE" opacity=".5"/>
+    <path d="M20 65 L180 65 L168 125 Q166 132 158 132 L42 132 Q34 132 32 125 Z" fill="#93C5FD"/>
+    <path d="M20 65 L180 65 L168 125 Q166 132 158 132 L42 132 Q34 132 32 125 Z" fill="none" stroke="#2563EB" strokeOpacity=".3" strokeWidth="1.5"/>
+    <circle cx="148" cy="40" r="20" fill="#EFF6FF" stroke="#3B82F6" strokeWidth="2"/>
+    <line x1="161" y1="53" x2="172" y2="64" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round"/>
+    <line x1="140" y1="40" x2="156" y2="40" stroke="#3B82F6" strokeWidth="2"/>
+  </svg>
+);
+
+
 // ══ THEME CONTEXT (Dark/Light) ══
 const ColorModeCtx = createContext({mode:'light',toggle:()=>{}});
 
@@ -376,6 +442,8 @@ function HomePage({go,prods}){
       <Box className="kbv-float" sx={{position:'absolute',top:'12%',left:'8%',width:{xs:60,md:120},height:{xs:60,md:120},borderRadius:'30%',background:GRAD.blue,opacity:.22,filter:'blur(8px)'}}/>
       <Box className="kbv-float" sx={{position:'absolute',top:'55%',right:'10%',width:{xs:80,md:160},height:{xs:80,md:160},borderRadius:'40%',background:GRAD.blue,opacity:.2,filter:'blur(12px)',animationDelay:'2s'}}/>
       <Box sx={{position:'absolute',top:'25%',left:'50%',transform:'translateX(-50%)',width:{xs:300,md:700},height:{xs:200,md:400},background:'radial-gradient(ellipse,rgba(59,130,246,.35) 0%,transparent 70%)',pointerEvents:'none'}}/>
+      <HeroBlueprintSVG style={{position:'absolute',right:'2%',top:'8%',width:340,height:340,display:isMobile?'none':'block',opacity:.9,pointerEvents:'none'}}/>
+      <HeroBlueprintSVG style={{position:'absolute',left:'-6%',bottom:'-4%',width:240,height:240,display:isMobile?'none':'block',opacity:.35,transform:'scaleX(-1) rotate(8deg)',pointerEvents:'none'}}/>
       <Container maxWidth="lg" sx={{position:'relative'}}>
         <Chip icon={<Box sx={{width:7,height:7,borderRadius:'50%',bgcolor:'#60A5FA',ml:1,boxShadow:'0 0 10px #60A5FA'}}/>}
           label={prods.length>0?`${prods.length}+ bản vẽ & đồ án chất lượng cao`:'Thư viện bản vẽ kỹ thuật chuyên nghiệp'}
@@ -474,8 +542,73 @@ function HomePage({go,prods}){
     </Box>}
 
     {prods.length===0&&<Container maxWidth="sm" sx={{py:10,textAlign:'center'}}>
-      <I8 name="blueprint" size={72}/><Typography variant="h6" color="text.secondary" sx={{mt:2}}>Kho bản vẽ đang được cập nhật</Typography>
+      <EmptyStateSVG style={{margin:'0 auto'}}/><Typography variant="h6" color="text.secondary" sx={{mt:2}}>Kho bản vẽ đang được cập nhật</Typography>
     </Container>}
+
+    {/* HOW IT WORKS */}
+    <Box sx={{bgcolor:'background.paper',py:{xs:5,md:8},borderTop:'1px solid',borderBottom:'1px solid',borderColor:'divider'}}>
+      <Container maxWidth="xl">
+        <Box sx={{mb:5,textAlign:'center'}}>
+          <Typography variant="h4" sx={{fontWeight:900,mb:1}}>Mua Bản Vẽ <Box component="span" className="kbv-gradient-text">Chỉ 3 Bước</Box></Typography>
+          <Typography variant="body1" color="text.secondary">Đơn giản, nhanh chóng, nhận file ngay trong vài giây</Typography>
+        </Box>
+        <Grid container spacing={3} alignItems="stretch">
+          {[
+            {n:'1',t:'Chọn Bản Vẽ',d:'Tìm bản vẽ hoặc đồ án phù hợp trong kho theo danh mục',img:'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=500&q=80'},
+            {n:'2',t:'Thanh Toán VietQR',d:'Quét mã QR, chuyển khoản nhanh, xác nhận tự động',img:'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=500&q=80'},
+            {n:'3',t:'Tải File Ngay',d:'Nhận link tải bảo mật, file DWG gốc về máy lập tức',img:'https://images.unsplash.com/photo-1551434678-e076c223a692?w=500&q=80'},
+          ].map((s,i)=>(
+            <Grid item xs={12} md={4} key={s.n}>
+              <Box sx={{position:'relative',height:'100%'}}>
+                <Card sx={{height:'100%',border:'1px solid',borderColor:'divider',overflow:'hidden'}}>
+                  <Box sx={{position:'relative',paddingTop:'58%'}}>
+                    <Box component="img" src={s.img} alt={s.t} sx={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+                    <Box sx={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(15,23,42,.65) 0%,transparent 60%)'}}/>
+                    <Box sx={{position:'absolute',top:10,left:10,width:34,height:34,borderRadius:'50%',background:GRAD.primary,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 12px rgba(37,99,235,.5)'}}>
+                      <Typography sx={{color:'#fff',fontWeight:900,fontSize:15}}>{s.n}</Typography>
+                    </Box>
+                  </Box>
+                  <Box sx={{p:2.5}}>
+                    <Typography variant="subtitle1" sx={{fontWeight:800,mb:.5}}>{s.t}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{lineHeight:1.6,fontSize:13}}>{s.d}</Typography>
+                  </Box>
+                </Card>
+                {i<2&&<Box sx={{display:{xs:'none',md:'flex'},position:'absolute',right:-28,top:'42%',zIndex:1}}>
+                  <FA icon="arrow-right" style={{fontSize:20,color:'#2563EB',opacity:.5}}/>
+                </Box>}
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+    </Box>
+
+    {/* TESTIMONIALS */}
+    <Container maxWidth="xl" sx={{py:{xs:5,md:8}}}>
+      <Box sx={{mb:4,textAlign:'center'}}>
+        <Typography variant="h4" sx={{fontWeight:900,mb:1}}>Khách Hàng <Box component="span" className="kbv-gradient-text">Nói Gì</Box></Typography>
+        <Typography variant="body1" color="text.secondary">Hàng nghìn sinh viên & kỹ sư đã tin dùng</Typography>
+      </Box>
+      <Grid container spacing={2.5}>
+        {[
+          {name:'Trần Minh Khoa',role:'Sinh viên Cơ Khí',avatar:'https://i.pravatar.cc/100?img=12',text:'Bản vẽ hộp giảm tốc rất chi tiết, đủ thuyết minh tính toán, giúp mình hoàn thành đồ án đúng hạn.'},
+          {name:'Lê Thị Hồng Nhung',role:'KTS tự do',avatar:'https://i.pravatar.cc/100?img=47',text:'File CAD sạch, đúng layer, tải về dùng được ngay. Giá hợp lý cho dân thiết kế tự do như mình.'},
+          {name:'Phạm Văn Đức',role:'Chủ xưởng CNC',avatar:'https://i.pravatar.cc/100?img=33',text:'Mẫu hoa văn lazer đa dạng, cắt thử ra sản phẩm đẹp. Sẽ tiếp tục ủng hộ shop dài lâu.'},
+        ].map(t=>(
+          <Grid item xs={12} sm={6} md={4} key={t.name}>
+            <Paper elevation={0} sx={{p:3,height:'100%',border:'1px solid',borderColor:'divider',position:'relative'}}>
+              <FA icon="quote-left" style={{fontSize:22,color:'#2563EB',opacity:.18,position:'absolute',top:16,right:18}}/>
+              <Rating value={5} readOnly size="small" sx={{mb:1.5,'& .MuiRating-iconFilled':{color:'#F59E0B'}}}/>
+              <Typography variant="body2" color="text.secondary" sx={{lineHeight:1.75,mb:2.5,fontStyle:'italic'}}>"{t.text}"</Typography>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Avatar src={t.avatar} alt={t.name} sx={{width:44,height:44,border:'2px solid',borderColor:'primary.main'}}/>
+                <Box><Typography variant="body2" sx={{fontWeight:700}}>{t.name}</Typography><Typography variant="caption" color="text.disabled">{t.role}</Typography></Box>
+              </Stack>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
 
     {/* CTA BANNER */}
     <Container maxWidth="xl" sx={{py:{xs:4,md:7}}}>
@@ -555,7 +688,19 @@ function ShopPage({go,prods,catFilter,setCatFilter,query,setQuery,buy}){
       </List>
     </Box>
   );
-  return(<Container maxWidth="xl" sx={{py:{xs:2,md:4}}}>
+  return(<Box>
+    <Box sx={{position:'relative',height:{xs:120,md:180},overflow:'hidden'}}>
+      <Box component="img" src="https://images.unsplash.com/photo-1542621334-a254cf47733d?w=1600&q=80" alt="Kho bản vẽ"
+        sx={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+      <Box sx={{position:'absolute',inset:0,background:'linear-gradient(120deg,rgba(10,22,40,.92) 0%,rgba(15,42,107,.75) 55%,rgba(10,22,40,.5) 100%)'}}/>
+      <Container maxWidth="xl" sx={{position:'relative',height:'100%',display:'flex',alignItems:'center'}}>
+        <Box>
+          <Typography variant={isMobile?'h5':'h4'} sx={{color:'#fff',fontWeight:900}}>Kho Bản Vẽ</Typography>
+          <Typography variant="body2" sx={{color:'rgba(255,255,255,.7)'}}>{prods.length} bản vẽ & đồ án đang chờ bạn khám phá</Typography>
+        </Box>
+      </Container>
+    </Box>
+    <Container maxWidth="xl" sx={{py:{xs:2,md:4}}}>
     <Box sx={{display:{xs:'flex',md:'none'},gap:1,mb:2}}>
       <TextField fullWidth size="small" placeholder="Tìm bản vẽ..." value={query} onChange={e=>setQuery(e.target.value)}
         InputProps={{startAdornment:<InputAdornment position="start"><FA icon="magnifying-glass" style={{fontSize:13,color:'#94A3B8'}}/></InputAdornment>}}/>
@@ -578,7 +723,7 @@ function ShopPage({go,prods,catFilter,setCatFilter,query,setQuery,buy}){
           </FormControl>
         </Box>
         {filtered.length===0
-          ?<Box sx={{textAlign:'center',py:10}}><I8 name="search" size={56}/><Typography variant="h6" color="text.secondary" sx={{mt:2}}>Không tìm thấy bản vẽ phù hợp</Typography></Box>
+          ?<Box sx={{textAlign:'center',py:10}}><EmptyStateSVG style={{margin:'0 auto'}} size={140}/><Typography variant="h6" color="text.secondary" sx={{mt:2}}>Không tìm thấy bản vẽ phù hợp</Typography></Box>
           :<Grid container spacing={2.5}>{filtered.map(p=><Grid item xs={6} sm={6} lg={4} key={p.id||p._id}><ProductCard p={p} onOpen={x=>go('detail',x)}/></Grid>)}</Grid>}
       </Grid>
     </Grid>
@@ -586,7 +731,8 @@ function ShopPage({go,prods,catFilter,setCatFilter,query,setQuery,buy}){
       <Box sx={{p:2,display:'flex',justifyContent:'flex-end'}}><IconButton onClick={()=>setDrawerOpen(false)} size="small"><FA icon="xmark"/></IconButton></Box>
       <Box sx={{px:2,pb:2}}><Sidebar/></Box>
     </Drawer>
-  </Container>);
+    </Container>
+  </Box>);
 }
 
 // ══ CONTENT / BLOG PAGE ══
@@ -833,8 +979,10 @@ function AdminLoginPage({onLogin}){
   const submit=async()=>{setBusy(true);setErr('');
     try{const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});const d=await r.json();
       if(r.ok){sessionStorage.setItem('adminToken',d.token);onLogin(d.token);}else setErr(d.error||'Sai mật khẩu');}catch{setErr('Lỗi kết nối');}finally{setBusy(false);}};
-  return(<Box sx={{minHeight:'100vh',background:GRAD.hero,display:'flex',alignItems:'center',justifyContent:'center',p:2}}>
-    <Paper elevation={0} sx={{p:{xs:4,md:5},maxWidth:400,width:'100%',borderRadius:2}} className="kbv-fadeup">
+  return(<Box sx={{minHeight:'100vh',background:GRAD.hero,display:'flex',alignItems:'center',justifyContent:'center',p:2,position:'relative',overflow:'hidden'}}>
+    <Box sx={{display:{xs:'none',sm:'block'},position:'absolute',top:'-8%',right:'-6%'}}><HeroBlueprintSVG style={{width:380,height:380,opacity:.5}}/></Box>
+    <Box sx={{display:{xs:'none',sm:'block'},position:'absolute',bottom:'-10%',left:'-8%'}}><HeroBlueprintSVG style={{width:300,height:300,opacity:.3,transform:'scaleX(-1)'}}/></Box>
+    <Paper elevation={0} sx={{p:{xs:4,md:5},maxWidth:400,width:'100%',borderRadius:2,position:'relative',zIndex:1}} className="kbv-fadeup">
       <Box sx={{textAlign:'center',mb:4}}>
         <Box sx={{width:64,height:64,borderRadius:1.25,background:GRAD.primary,display:'flex',alignItems:'center',justifyContent:'center',mx:'auto',mb:2,boxShadow:'0 8px 24px rgba(37,99,235,.4)'}}><FA icon="lock" style={{fontSize:26,color:'#fff'}}/></Box>
         <Typography variant="h5" sx={{fontWeight:900}}>Admin KhoBanVe2D</Typography>
