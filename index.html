@@ -306,6 +306,19 @@ const blogCatOf = id => BLOG_CATS.find(c=>c.id===id)||{label:id,i8:'document',co
 
 // ══ UTILS ══
 const vnd = n => (Number(n)||0).toLocaleString('vi-VN')+'đ';
+// Phòng thủ XSS chiều sâu khi render HTML bài viết (kể cả khi backend bị bỏ qua)
+const sanitizeHtml = (html) => {
+  if(typeof html!=='string') return '';
+  return html
+    .replace(/<\s*script[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi,'')
+    .replace(/<\s*iframe[^>]*>[\s\S]*?<\s*\/\s*iframe\s*>/gi,'')
+    .replace(/<\s*\/?\s*(object|embed|form)[^>]*>/gi,'')
+    .replace(/<\s*(link|meta|base)[^>]*>/gi,'')
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi,'')
+    .replace(/\son\w+\s*=\s*'[^']*'/gi,'')
+    .replace(/\son\w+\s*=\s*[^\s>]+/gi,'')
+    .replace(/javascript\s*:/gi,'');
+};
 const genOid = () => 'KBV'+Date.now().toString(36).toUpperCase().slice(-6);
 const fmtBytes = b => b<1024?b+'B':b<1048576?(b/1024).toFixed(0)+'kB':(b/1048576).toFixed(1)+'MB';
 const timeAgo = d => {
@@ -923,7 +936,7 @@ function ArticlePage({article,go}){
       <Typography variant="body2" color="text.disabled"><FA icon="eye" style={{marginRight:5}}/>{(article.views||0).toLocaleString()} lượt xem</Typography></Stack>
     {article.cover&&<Box component="img" src={article.cover} sx={{width:'100%',borderRadius:1.5,mb:4,maxHeight:420,objectFit:'cover'}}/>}
     <Box sx={{'& p':{mb:2,lineHeight:1.9,fontSize:16},'& h2':{fontWeight:800,mt:4,mb:2},'& h3':{fontWeight:700,mt:3,mb:1.5},'& img':{borderRadius:1.25,my:2},'& ul,& ol':{pl:3,mb:2},'& li':{mb:1,lineHeight:1.8},'& blockquote':{borderLeft:'3px solid',borderColor:'primary.main',pl:2,ml:0,my:2,color:'text.secondary',fontStyle:'italic'},'& a':{color:'primary.main',textDecoration:'underline'}}}
-      dangerouslySetInnerHTML={{__html:article.content||`<p>${article.excerpt||''}</p>`}}/>
+      dangerouslySetInnerHTML={{__html:sanitizeHtml(article.content||`<p>${article.excerpt||''}</p>`)}}/>
     <Divider sx={{my:4}}/>
     <Paper elevation={0} sx={{p:3,borderRadius:1.5,background:GRAD.primary,textAlign:'center'}}>
       <Typography sx={{color:'#fff',fontWeight:800,mb:1.5}}>Cần bản vẽ hoặc đồ án theo yêu cầu?</Typography>

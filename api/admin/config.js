@@ -1,15 +1,24 @@
 const crypto = require("crypto");
 
+function safeEqual(a, b) {
+  const ba = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
+
 function verifyAdmin(req) {
-  const token = (req.headers["authorization"] || "").replace("Bearer ", "");
+  const token = (req.headers["authorization"] || "").replace("Bearer ", "").trim();
   if (!token) return false;
   try {
-    const [ts, sig] = token.split(".");
-    if (!ts || !sig || Date.now() - parseInt(ts) > 86400000) return false;
-    const expected = crypto
-      .createHmac("sha256", process.env.ADMIN_SECRET || "admin-secret")
+    const parts = token.split(".");
+    if (parts.length !== 2) return false;
+    const [ts, sig] = parts;
+    if (!ts || !sig || !/^\d+$/.test(ts)) return false;
+    if (Date.now() - parseInt(ts) > 86400000) return false;
+    const expected = crypto.createHmac("sha256", process.env.ADMIN_SECRET || "admin-secret")
       .update(`admin:${ts}`).digest("hex");
-    return sig === expected;
+    return safeEqual(sig, expected);
   } catch { return false; }
 }
 

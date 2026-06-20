@@ -1,14 +1,24 @@
 const crypto = require("crypto");
 
+function safeEqual(a, b) {
+  const ba = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
+
 function verifyAdmin(req) {
-  const token = (req.headers["authorization"] || "").replace("Bearer ", "");
+  const token = (req.headers["authorization"] || "").replace("Bearer ", "").trim();
   if (!token) return false;
   try {
-    const [ts, sig] = token.split(".");
-    if (!ts || !sig || Date.now() - parseInt(ts) > 86400000) return false;
+    const parts = token.split(".");
+    if (parts.length !== 2) return false;
+    const [ts, sig] = parts;
+    if (!ts || !sig || !/^\d+$/.test(ts)) return false;
+    if (Date.now() - parseInt(ts) > 86400000) return false;
     const expected = crypto.createHmac("sha256", process.env.ADMIN_SECRET || "admin-secret")
       .update(`admin:${ts}`).digest("hex");
-    return sig === expected;
+    return safeEqual(sig, expected);
   } catch { return false; }
 }
 
@@ -44,20 +54,24 @@ module.exports = async function handler(req, res) {
     // ── GET ──
     if (req.method === "GET") {
       const { id, admin } = req.query;
-      if (id) {
-        const p = await col.findOne({ _id: new ObjectId(id) });
-        return res.status(p ? 200 : 404).json(p || { error: "Not found" });
-      }
       const isAdmin = admin && verifyAdmin(req);
-      const filter  = isAdmin ? {} : { isActive: true };
 
-      // Public: chỉ lấy đúng fields cần thiết, ẩn hoàn toàn driveFileId + nội bộ
-      const projection = isAdmin ? {} : {
+      // Projection ẩn driveFileId + nội bộ cho public (áp dụng CẢ get-by-id)
+      const publicProjection = {
         _id: 1, code: 1, title: 1, category: 1, subcategory: 1,
         images: 1, description: 1, fileType: 1, fileSize: 1, fileCount: 1,
         price: 1, originalPrice: 1, isFree: 1, isHot: 1, isNew: 1,
         rating: 1, reviewCount: 1, downloadCount: 1, tags: 1
       };
+      const projection = isAdmin ? {} : publicProjection;
+
+      if (id) {
+        let _id;
+        try { _id = new ObjectId(id); } catch { return res.status(400).json({ error: "Invalid id" }); }
+        const p = await col.findOne({ _id }, { projection });
+        return res.status(p ? 200 : 404).json(p || { error: "Not found" });
+      }
+      const filter = isAdmin ? {} : { isActive: true };
       const prods = await col.find(filter, { projection }).sort({ createdAt: -1 }).toArray();
       return res.status(200).json(prods);
     }
@@ -96,6 +110,7 @@ module.exports = async function handler(req, res) {
     if (req.method === "PUT") {
       const { id } = req.query;
       if (!id) return res.status(400).json({ error: "Missing id" });
+      let _oid; try { _oid = new ObjectId(id); } catch { return res.status(400).json({ error: "Invalid id" }); }
       const upd = { ...req.body, updatedAt: new Date() };
       delete upd._id;
       if (upd.price !== undefined) upd.price = Number(upd.price);
@@ -103,7 +118,7 @@ module.exports = async function handler(req, res) {
       if (upd.downloadCount !== undefined) upd.downloadCount = Number(upd.downloadCount);
       if (upd.rating !== undefined)        upd.rating = parseFloat(upd.rating);
       if (upd.originalPrice !== undefined) upd.originalPrice = upd.originalPrice ? Number(upd.originalPrice) : null;
-      const r = await col.updateOne({ _id: new ObjectId(id) }, { $set: upd });
+      const r = await col.updateOne({ _id: _oid }, { $set: upd });
       return r.matchedCount ? res.status(200).json({ success: true }) : res.status(404).json({ error: "Not found" });
     }
 
@@ -111,7 +126,8 @@ module.exports = async function handler(req, res) {
     if (req.method === "DELETE") {
       const { id } = req.query;
       if (!id) return res.status(400).json({ error: "Missing id" });
-      const r = await col.deleteOne({ _id: new ObjectId(id) });
+      let _oid; try { _oid = new ObjectId(id); } catch { return res.status(400).json({ error: "Invalid id" }); }
+      const r = await col.deleteOne({ _id: _oid });
       return r.deletedCount ? res.status(200).json({ success: true }) : res.status(404).json({ error: "Not found" });
     }
 

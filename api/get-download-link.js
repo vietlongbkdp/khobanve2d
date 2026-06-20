@@ -20,8 +20,10 @@ module.exports = async function handler(req, res) {
   const { orderId, productId, amount } = req.query;
   if (!orderId || !productId) return res.status(400).json({ error: "Missing params" });
 
-  // Lấy driveFileId từ MongoDB
+  // Lấy driveFileId + giá thực từ MongoDB (KHÔNG tin amount do client gửi)
   let driveFileId = null;
+  let prodPrice = null;
+  let prodIsFree = false;
   try {
     const { MongoClient, ObjectId } = require("mongodb");
     const client = new MongoClient(process.env.MONGODB_URL, { serverSelectionTimeoutMS: 5000 });
@@ -32,7 +34,11 @@ module.exports = async function handler(req, res) {
       let prod = null;
       try { prod = await col.findOne({ _id: new ObjectId(productId) }); } catch {}
       if (!prod) prod = await col.findOne({ _id: productId });
-      if (prod) driveFileId = prod.driveFileId;
+      if (prod) {
+        driveFileId = prod.driveFileId;
+        prodPrice   = Number(prod.price) || 0;
+        prodIsFree  = !!prod.isFree;
+      }
     } finally { await client.close(); }
   } catch (e) {
     console.error("[get-download] MongoDB error:", e.message);
@@ -47,10 +53,13 @@ module.exports = async function handler(req, res) {
     return res.status(404).json({ error: "File chưa được cấu hình cho sản phẩm này" });
   }
 
-  // Sản phẩm miễn phí
-  if (parseFloat(amount) === 0) {
+  // Sản phẩm miễn phí — CHỈ khi DB xác nhận isFree hoặc giá = 0 (không tin client)
+  if (prodIsFree || prodPrice === 0) {
     return res.status(200).json({ token: createToken(productId, driveFileId, "FREE"), expires: 900 });
   }
+
+  // Sản phẩm có phí: BẮT BUỘC verify thanh toán theo GIÁ THỰC trong DB
+  const requiredAmount = prodPrice;
 
   const SEPAY_TOKEN = process.env.SEPAY_API_TOKEN;
   if (!SEPAY_TOKEN) return res.status(500).json({ error: "SEPAY_API_TOKEN not configured" });
@@ -66,11 +75,12 @@ module.exports = async function handler(req, res) {
     const matched = (data.transactions || []).find(tx => {
       const content  = (tx.transaction_content || "").toUpperCase();
       const txAmount = parseFloat(tx.amount_in || 0);
-      return content.includes(orderId.toUpperCase()) && txAmount >= parseFloat(amount || 0);
+      return content.includes(orderId.toUpperCase()) && txAmount >= requiredAmount;
     });
     if (!matched) return res.status(402).json({ error: "Payment not found" });
     return res.status(200).json({ token: createToken(productId, driveFileId, orderId), expires: 900 });
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    console.error("[get-download] verify error:", e.message);
+    return res.status(500).json({ error: "Lỗi xác minh thanh toán" });
   }
 };

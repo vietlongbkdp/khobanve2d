@@ -75,7 +75,7 @@ module.exports = async function handler(req, res) {
 function errorPage(title, msg) {
   return `<!DOCTYPE html><html lang="vi">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>${title} — KhoBanVe2D</title>
+<title>${title} — MuaBanVe2D</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Be Vietnam Pro',sans-serif;background:#F8FAFC;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}.c{background:#fff;border-radius:20px;padding:48px 36px;max-width:460px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(15,23,42,.12)}h1{font-size:19px;font-weight:700;color:#0F172A;margin:16px 0 10px}p{font-size:14px;color:#64748B;line-height:1.8;margin-bottom:24px}.btn{display:inline-block;background:#2563EB;color:#fff;text-decoration:none;border-radius:10px;padding:11px 26px;font-size:14px;font-weight:600;margin:4px}.zalo{display:inline-block;background:#0068FF;color:#fff;text-decoration:none;border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;margin:4px}</style>
 </head><body><div class="c"><div style="font-size:54px">⏳</div><h1>${title}</h1><p>${msg}</p>

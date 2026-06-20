@@ -7,15 +7,26 @@
  */
 const crypto = require("crypto");
 
-function verifyAdmin(req){
-  const token=(req.headers["authorization"]||"").replace("Bearer ","");
-  if(!token) return false;
-  try{
-    const [ts,sig]=token.split(".");
-    if(!ts||!sig||Date.now()-parseInt(ts)>86400000) return false;
-    const expected=crypto.createHmac("sha256",process.env.ADMIN_SECRET||"admin-secret").update(`admin:${ts}`).digest("hex");
-    return sig===expected;
-  }catch{ return false; }
+function safeEqual(a, b) {
+  const ba = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
+
+function verifyAdmin(req) {
+  const token = (req.headers["authorization"] || "").replace("Bearer ", "").trim();
+  if (!token) return false;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 2) return false;
+    const [ts, sig] = parts;
+    if (!ts || !sig || !/^\d+$/.test(ts)) return false;
+    if (Date.now() - parseInt(ts) > 86400000) return false;
+    const expected = crypto.createHmac("sha256", process.env.ADMIN_SECRET || "admin-secret")
+      .update(`admin:${ts}`).digest("hex");
+    return safeEqual(sig, expected);
+  } catch { return false; }
 }
 
 module.exports = async function handler(req,res){
@@ -36,15 +47,21 @@ module.exports = async function handler(req,res){
       if(!b.name||!b.phone||!b.description){
         return res.status(400).json({error:"Vui lòng điền đầy đủ Họ tên, SĐT/Zalo và Mô tả yêu cầu"});
       }
+      // Giới hạn độ dài chống spam/payload quá lớn
+      const cap=(s,n)=>String(s||"").trim().slice(0,n);
+      const allowedCats=["kien-truc","co-khi","cong","lazer","do-an","xay-dung","khac"];
+      const imgs=(Array.isArray(b.referenceImages)?b.referenceImages:[])
+        .filter(u=>typeof u==="string" && /^https:\/\//.test(u))  // chỉ chấp nhận URL https
+        .slice(0,10);                                              // tối đa 10 ảnh
       const doc={
-        name:b.name.trim(),
-        phone:b.phone.trim(),
-        email:(b.email||"").trim(),
-        category:b.category||"khac",
-        description:b.description.trim(),
-        budget:b.budget||"",
-        deadline:b.deadline||"",
-        referenceImages:Array.isArray(b.referenceImages)?b.referenceImages:[],
+        name:cap(b.name,120),
+        phone:cap(b.phone,30),
+        email:cap(b.email,120),
+        category:allowedCats.includes(b.category)?b.category:"khac",
+        description:cap(b.description,5000),
+        budget:cap(b.budget,80),
+        deadline:cap(b.deadline,80),
+        referenceImages:imgs,
         status:"new", // new | contacted | quoted | done | cancelled
         adminNote:"",
         createdAt:new Date(),
@@ -63,14 +80,20 @@ module.exports = async function handler(req,res){
 
     if(req.method==="PUT"){
       const {id}=req.query; if(!id) return res.status(400).json({error:"Missing id"});
-      const upd={...req.body}; delete upd._id;
-      const r=await col.updateOne({_id:new ObjectId(id)},{$set:upd});
+      let _oid; try{_oid=new ObjectId(id);}catch{return res.status(400).json({error:"Invalid id"});}
+      const allowed=["new","contacted","quoted","done","cancelled"];
+      const upd={};
+      if(req.body && allowed.includes(req.body.status)) upd.status=req.body.status;
+      if(req.body && typeof req.body.adminNote==="string") upd.adminNote=req.body.adminNote.slice(0,2000);
+      if(Object.keys(upd).length===0) return res.status(400).json({error:"Không có trường hợp lệ để cập nhật"});
+      const r=await col.updateOne({_id:_oid},{$set:upd});
       return r.matchedCount?res.status(200).json({success:true}):res.status(404).json({error:"Not found"});
     }
 
     if(req.method==="DELETE"){
       const {id}=req.query; if(!id) return res.status(400).json({error:"Missing id"});
-      const r=await col.deleteOne({_id:new ObjectId(id)});
+      let _oid; try{_oid=new ObjectId(id);}catch{return res.status(400).json({error:"Invalid id"});}
+      const r=await col.deleteOne({_id:_oid});
       return r.deletedCount?res.status(200).json({success:true}):res.status(404).json({error:"Not found"});
     }
 
