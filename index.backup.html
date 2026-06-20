@@ -1946,7 +1946,7 @@ function AdminDashboard({token,onLogout}){
             <Stack direction="row" spacing={1} flexWrap="wrap" sx={{gap:1}}>{reqDetail.referenceImages.map((u,i)=><Box key={i} component="img" src={u} sx={{width:80,height:60,borderRadius:.5,objectFit:'cover'}}/>)}</Stack></Box>}
           <Box><Typography variant="caption" color="text.disabled" sx={{display:'block',mb:.5}}>Cập nhật trạng thái</Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" sx={{gap:1}}>
-              {[['contacted','Đã liên hệ','warning'],['quoted','Đã báo giá','info'],['done','Hoàn thành','success'],['cancelled','Hủy','default']].map(([st,l,c])=>(
+              {[['contacted','Đã liên hệ','warning'],['quoted','Đã báo giá','info'],['done','Hoàn thành','success'],['cancelled','Hủy','inherit']].map(([st,l,c])=>(
                 <Button key={st} size="small" variant={reqDetail.status===st?'contained':'outlined'} color={c} onClick={()=>{updateReqStatus(reqDetail._id,st);setReqDetail({...reqDetail,status:st});}}>{l}</Button>
               ))}
             </Stack>
