@@ -647,7 +647,7 @@ function NavBar({page,go,query,setQuery}){
   </>);
 }
 // ══ HOME PAGE ══
-function HomePage({go,prods}){
+function HomePage({go,prods,loading}){
   const isMobile=useMediaQuery(t=>t.breakpoints.down('sm'));
   const cntByCat=useMemo(()=>{const m={};prods.forEach(p=>{const c=p.cat||p.category;m[c]=(m[c]||0)+1;});return m;},[prods]);
   const featured=prods.filter(p=>p.hot||p.isHot).slice(0,8);
@@ -748,6 +748,19 @@ function HomePage({go,prods}){
       </Grid>
     </Container>
 
+    {loading?<Box sx={{bgcolor:'background.paper',py:{xs:5,md:8}}}>
+      <Container maxWidth="xl">
+        <Skeleton variant="text" width={200} height={44} sx={{mb:1}}/>
+        <Skeleton variant="text" width={160} height={22} sx={{mb:3}}/>
+        <Grid container spacing={2.5}>{[1,2,3,4].map(i=>(
+          <Grid item xs={6} sm={6} md={3} key={i}>
+            <Skeleton variant="rounded" sx={{borderRadius:1.25,paddingTop:'64%',mb:1}}/>
+            <Skeleton variant="text" width="90%"/>
+            <Skeleton variant="text" width="50%"/>
+          </Grid>
+        ))}</Grid>
+      </Container>
+    </Box>:<>
     {/* FEATURED */}
     {featured.length>0&&<Box sx={{bgcolor:'background.paper',py:{xs:5,md:8}}}>
       <Container maxWidth="xl">
@@ -779,6 +792,7 @@ function HomePage({go,prods}){
     {prods.length===0&&<Container maxWidth="sm" sx={{py:10,textAlign:'center'}}>
       <EmptyStateSVG style={{margin:'0 auto'}}/><Typography variant="h6" color="text.secondary" sx={{mt:2}}>Kho bản vẽ đang được cập nhật</Typography>
     </Container>}
+    </>}
 
     {/* HOW IT WORKS */}
     <Box sx={{bgcolor:'background.paper',py:{xs:5,md:8},borderTop:'1px solid',borderBottom:'1px solid',borderColor:'divider'}}>
@@ -898,7 +912,7 @@ function HomePage({go,prods}){
   </Box>);
 }
 // ══ SHOP PAGE ══
-function ShopPage({go,prods,catFilter,setCatFilter,query,setQuery,buy}){
+function ShopPage({go,prods,loading,catFilter,setCatFilter,query,setQuery,buy}){
   const isMobile=useMediaQuery(t=>t.breakpoints.down('md'));
   const [drawerOpen,setDrawerOpen]=useState(false);
   const [sort,setSort]=useState('newest');
@@ -952,7 +966,7 @@ function ShopPage({go,prods,catFilter,setCatFilter,query,setQuery,buy}){
       </Grid>
       <Grid item xs={12} md={9.5}>
         <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'center',mb:2,gap:1,flexWrap:'wrap'}}>
-          <Typography variant="body2" color="text.secondary"><FA icon="box-open" style={{marginRight:6}}/>Tìm thấy <b>{filtered.length}</b> bản vẽ{catFilter!=='all'&&<> trong <b>{CATS.find(c=>c.id===catFilter)?.label}</b></>}</Typography>
+          <Typography variant="body2" color="text.secondary"><FA icon="box-open" style={{marginRight:6}}/>{loading?'Đang tải dữ liệu...':<>Tìm thấy <b>{filtered.length}</b> bản vẽ{catFilter!=='all'&&<> trong <b>{CATS.find(c=>c.id===catFilter)?.label}</b></>}</>}</Typography>
           <FormControl size="small" sx={{minWidth:160}}>
             <Select value={sort} onChange={e=>setSort(e.target.value)}>
               <MenuItem value="newest">Mới nhất</MenuItem>
@@ -962,7 +976,15 @@ function ShopPage({go,prods,catFilter,setCatFilter,query,setQuery,buy}){
             </Select>
           </FormControl>
         </Box>
-        {filtered.length===0
+        {loading
+          ?<Grid container spacing={2.5}>{[1,2,3,4,5,6].map(i=>(
+              <Grid item xs={6} sm={6} lg={4} key={i}>
+                <Skeleton variant="rounded" sx={{borderRadius:1.25,paddingTop:'64%',mb:1}}/>
+                <Skeleton variant="text" width="85%"/>
+                <Skeleton variant="text" width="45%"/>
+              </Grid>
+            ))}</Grid>
+          :filtered.length===0
           ?<Box sx={{textAlign:'center',py:10}}><EmptyStateSVG style={{margin:'0 auto'}} size={140}/><Typography variant="h6" color="text.secondary" sx={{mt:2}}>Không tìm thấy bản vẽ phù hợp</Typography></Box>
           :<Grid container spacing={2.5}>{filtered.map(p=><Grid item xs={6} sm={6} lg={4} key={p.id||p._id}><ProductCard p={p} onOpen={x=>go('detail',x)}/></Grid>)}</Grid>}
       </Grid>
@@ -976,7 +998,7 @@ function ShopPage({go,prods,catFilter,setCatFilter,query,setQuery,buy}){
 }
 
 // ══ CONTENT / BLOG PAGE ══
-function ContentPage({go,arts,goArticle}){
+function ContentPage({go,arts,loading,goArticle}){
   const isMobile=useMediaQuery(t=>t.breakpoints.down('sm'));
   const [catF,setCatF]=useState('all');
   const list=Array.isArray(arts)?arts:[];
@@ -999,7 +1021,16 @@ function ContentPage({go,arts,goArticle}){
           onClick={()=>setCatF(c.id)}
           sx={{fontWeight:700,'& .MuiChip-label':{display:'flex',alignItems:'center'},...(catF===c.id?{bgcolor:c.color,color:'#fff'}:{})}}/>)}
       </Stack>
-      {filtered.length===0
+      {loading
+        ?<Grid container spacing={3}>{[1,2,3].map(i=>(
+            <Grid item xs={12} sm={6} md={4} key={i}>
+              <Skeleton variant="rounded" sx={{borderRadius:1.25,paddingTop:'56%',mb:1}}/>
+              <Skeleton variant="text" width="90%" height={28}/>
+              <Skeleton variant="text" width="100%"/>
+              <Skeleton variant="text" width="60%"/>
+            </Grid>
+          ))}</Grid>
+        :filtered.length===0
         ?<Box sx={{textAlign:'center',py:8}}><I8 name="document" size={56}/><Typography color="text.secondary" sx={{mt:2}}>Chưa có bài viết nào trong mục này</Typography></Box>
         :<>
           {featured&&<Card className="kbv-card kbv-card-depth" onClick={()=>goArticle(featured)} sx={{mb:4,cursor:'pointer',overflow:'hidden',border:'1px solid',borderColor:'divider'}}>
@@ -1791,11 +1822,13 @@ function AdminDashboard({token,onLogout}){
   const [search,setSearch]=useState('');const [catF,setCatF]=useState('all');
   const [arts,setArts]=useState([]);const [artModal,setArtModal]=useState(null);
   const [reqs,setReqs]=useState([]);const [reqDetail,setReqDetail]=useState(null);
+  const [artsLoading,setArtsLoading]=useState(true);
+  const [reqsLoading,setReqsLoading]=useState(true);
   const isMobile=useMediaQuery(t=>t.breakpoints.down('md'));
   const load=async(silent=false)=>{if(!silent)setLoading(true);try{const r=await fetch('/api/products?admin=1',{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(Array.isArray(d))setProds(d);}catch{}finally{if(!silent)setLoading(false);}};
-  const loadArts=async()=>{try{const r=await fetch('/api/articles?admin=1',{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(Array.isArray(d))setArts(d);}catch{}};
-  const loadReqs=async()=>{try{const r=await fetch('/api/custom-requests?admin=1',{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(Array.isArray(d))setReqs(d);}catch{}};
-  useEffect(()=>{load();loadArts();loadReqs();const iv=setInterval(()=>{load(true);loadReqs();},30000);return()=>clearInterval(iv);},[]);
+  const loadArts=async()=>{setArtsLoading(true);try{const r=await fetch('/api/articles?admin=1',{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(Array.isArray(d))setArts(d);}catch{}finally{setArtsLoading(false);}};
+  const loadReqs=async(silent=false)=>{if(!silent)setReqsLoading(true);try{const r=await fetch('/api/custom-requests?admin=1',{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(Array.isArray(d))setReqs(d);}catch{}finally{if(!silent)setReqsLoading(false);}};
+  useEffect(()=>{load();loadArts();loadReqs();const iv=setInterval(()=>{load(true);loadReqs(true);},30000);return()=>clearInterval(iv);},[]);
   const del=async(id,title)=>{if(!confirm(`Xóa "${title}"?`))return;setDeleting(id);try{const r=await fetch(`/api/products?id=${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});if(r.ok)load();}finally{setDeleting(null);}};
   const delArt=async(id,title)=>{if(!confirm(`Xóa bài "${title}"?`))return;try{const r=await fetch(`/api/articles?id=${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});if(r.ok)loadArts();}catch{}};
   const updateReqStatus=async(id,status)=>{try{await fetch(`/api/custom-requests?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({status})});loadReqs();}catch{}};
@@ -1865,7 +1898,7 @@ function AdminDashboard({token,onLogout}){
           {tab===2&&<BatchUploadTab token={token}/>}
           {tab===3&&<>
             <Box sx={{display:'flex',justifyContent:'space-between',mb:2}}><Typography variant="subtitle1" sx={{fontWeight:800}}><FA icon="newspaper" style={{marginRight:8,color:'#0EA5E9'}}/>Quản Lý Bài Viết</Typography><Button variant="contained" onClick={()=>setArtModal('add')} startIcon={<FA icon="plus" style={{fontSize:13}}/>} sx={{background:GRAD.pink}}>Viết Bài</Button></Box>
-            {arts.length===0?<Box sx={{textAlign:'center',py:8}}><I8 name="document"/><Typography color="text.disabled" sx={{mt:1}}>Chưa có bài viết. Bấm "Viết Bài" để tạo bài chia sẻ đầu tiên.</Typography></Box>:
+            {artsLoading?<Box sx={{textAlign:'center',py:6}}><CircularProgress size={28}/></Box>:arts.length===0?<Box sx={{textAlign:'center',py:8}}><I8 name="document"/><Typography color="text.disabled" sx={{mt:1}}>Chưa có bài viết. Bấm "Viết Bài" để tạo bài chia sẻ đầu tiên.</Typography></Box>:
             <Grid container spacing={2}>{arts.map(a=>(<Grid item xs={12} sm={6} md={4} key={a._id}><Paper elevation={0} sx={{borderRadius:1.25,border:'1px solid',borderColor:'divider',overflow:'hidden'}}>
               {a.cover&&<Box component="img" src={a.cover} sx={{width:'100%',height:120,objectFit:'cover'}}/>}
               <Box sx={{p:2}}><Chip size="small" label={blogCatOf(a.category).label} sx={{mb:1,bgcolor:alpha(blogCatOf(a.category).color,.12),color:blogCatOf(a.category).color,fontWeight:700}}/>
@@ -1876,7 +1909,7 @@ function AdminDashboard({token,onLogout}){
           </>}
           {tab===4&&<>
             <Typography variant="subtitle1" sx={{fontWeight:800,mb:2}}><FA icon="pen-ruler" style={{marginRight:8,color:'#EC4899'}}/>Yêu Cầu Vẽ Theo Thiết Kế ({reqs.length})</Typography>
-            {reqs.length===0?<Box sx={{textAlign:'center',py:8}}><I8 name="inbox"/><Typography color="text.disabled" sx={{mt:1}}>Chưa có yêu cầu nào từ khách hàng.</Typography></Box>:
+            {reqsLoading?<Box sx={{textAlign:'center',py:6}}><CircularProgress size={28}/></Box>:reqs.length===0?<Box sx={{textAlign:'center',py:8}}><I8 name="inbox"/><Typography color="text.disabled" sx={{mt:1}}>Chưa có yêu cầu nào từ khách hàng.</Typography></Box>:
             <TableContainer><Table size="small"><TableHead><TableRow sx={{bgcolor:'action.hover'}}>{['','Khách Hàng','Loại','Mô Tả','Ngày Gửi','Trạng Thái',''].map(h=><TableCell key={h} sx={{fontWeight:700,fontSize:11,color:'text.secondary',textTransform:'uppercase',whiteSpace:'nowrap'}}>{h}</TableCell>)}</TableRow></TableHead>
               <TableBody>{reqs.map(r=>{
                 const STATUS_MAP={new:['Mới','error'],contacted:['Đã liên hệ','warning'],quoted:['Đã báo giá','info'],done:['Hoàn thành','success'],cancelled:['Đã hủy','default']};
@@ -1943,8 +1976,8 @@ function AppContent(){
   const [article,setArticle]=useState(null);
   const [order,setOrder]=useState(null);
   const [payState,setPayState]=useState('waiting');
-  const {prods}=useProducts();
-  const {arts}=useArticles();
+  const {prods,loading:prodsLoading}=useProducts();
+  const {arts,loading:artsLoading}=useArticles();
   const isMobile=useMediaQuery(t=>t.breakpoints.down('sm'));
   const [botNav,setBotNav]=useState(0);
   const go=useCallback((p,data=null)=>{
@@ -1973,9 +2006,9 @@ function AppContent(){
   return(<>
     <NavBar page={page} go={go} query={query} setQuery={setQuery}/>
     <Box component="main" sx={{pb:{xs:7,sm:0},minHeight:'60vh'}}>
-      {page==='home'&&<HomePage go={go} prods={prods}/>}
-      {page==='shop'&&<ShopPage go={go} prods={prods} catFilter={catFilter} setCatFilter={setCatFilter} query={query} setQuery={setQuery} buy={buy}/>}
-      {page==='content'&&<ContentPage go={go} arts={arts} goArticle={goArticle}/>}
+      {page==='home'&&<HomePage go={go} prods={prods} loading={prodsLoading}/>}
+      {page==='shop'&&<ShopPage go={go} prods={prods} loading={prodsLoading} catFilter={catFilter} setCatFilter={setCatFilter} query={query} setQuery={setQuery} buy={buy}/>}
+      {page==='content'&&<ContentPage go={go} arts={arts} loading={artsLoading} goArticle={goArticle}/>}
       {page==='article'&&<ArticlePage article={article} go={go}/>}
       {page==='custom'&&<CustomOrderPage go={go}/>}
       {page==='detail'&&<DetailPage prod={prod} go={go} buy={buy} prods={prods}/>}
