@@ -38,7 +38,7 @@ async function callModel(cleanName, model, apiKey) {
     headers: {
       "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "HTTP-Referer": "https://khobanve2d.vercel.app",
+      "HTTP-Referer": "https://www.muabanve2d.com",
     },
     body: JSON.stringify({
       model,

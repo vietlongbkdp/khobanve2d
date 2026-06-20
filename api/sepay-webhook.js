@@ -1,6 +1,6 @@
 /**
  * /api/sepay-webhook.js — Nhận webhook từ SePay (optional)
- * URL webhook tại SePay: https://khobanve2d.vercel.app/api/sepay-webhook
+ * URL webhook tại SePay: https://www.muabanve2d.com/api/sepay-webhook
  */
 
 module.exports = async function handler(req, res) {
