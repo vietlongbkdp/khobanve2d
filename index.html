@@ -922,7 +922,7 @@ function ArticlePage({article,go}){
       <Typography variant="body2" color="text.disabled"><FA icon="clock" style={{marginRight:5}}/>{timeAgo(article.createdAt)}</Typography>
       <Typography variant="body2" color="text.disabled"><FA icon="eye" style={{marginRight:5}}/>{(article.views||0).toLocaleString()} lượt xem</Typography></Stack>
     {article.cover&&<Box component="img" src={article.cover} sx={{width:'100%',borderRadius:1.5,mb:4,maxHeight:420,objectFit:'cover'}}/>}
-    <Box sx={{'& p':{mb:2,lineHeight:1.9,fontSize:16},'& h2':{fontWeight:800,mt:4,mb:2},'& h3':{fontWeight:700,mt:3,mb:1.5},'& img':{borderRadius:1.25,my:2},'& ul,& ol':{pl:3,mb:2},'& li':{mb:1,lineHeight:1.8}}}
+    <Box sx={{'& p':{mb:2,lineHeight:1.9,fontSize:16},'& h2':{fontWeight:800,mt:4,mb:2},'& h3':{fontWeight:700,mt:3,mb:1.5},'& img':{borderRadius:1.25,my:2},'& ul,& ol':{pl:3,mb:2},'& li':{mb:1,lineHeight:1.8},'& blockquote':{borderLeft:'3px solid',borderColor:'primary.main',pl:2,ml:0,my:2,color:'text.secondary',fontStyle:'italic'},'& a':{color:'primary.main',textDecoration:'underline'}}}
       dangerouslySetInnerHTML={{__html:article.content||`<p>${article.excerpt||''}</p>`}}/>
     <Divider sx={{my:4}}/>
     <Paper elevation={0} sx={{p:3,borderRadius:1.5,background:GRAD.primary,textAlign:'center'}}>
@@ -1255,8 +1255,125 @@ function AdminLoginPage({onLogin}){
 }
 
 // ══ IMAGE PASTE ZONE (chụp màn hình → Ctrl+V, nhiều ảnh) ══
+// ══ RICH TEXT EDITOR — soạn có định dạng, hiển thị đúng WYSIWYG ══
+function RichTextEditor({value,onChange,onUploadImage,placeholder}){
+  const ref=useRef(null);
+  const [uploading,setUploading]=useState(false);
+  const didInit=useRef(false);
+
+  useEffect(()=>{
+    if(!didInit.current && ref.current){
+      ref.current.innerHTML = value || '';
+      didInit.current = true;
+    }
+  },[]);
+
+  const exec=(cmd,val=null)=>{
+    if(ref.current) ref.current.focus();
+    document.execCommand(cmd,false,val);
+    if(ref.current) onChange(ref.current.innerHTML);
+  };
+
+  const handleInput=()=>{ if(ref.current) onChange(ref.current.innerHTML); };
+
+  const doInsertImage=async(file)=>{
+    if(ref.current) ref.current.focus();
+    setUploading(true);
+    try{
+      const url=await onUploadImage(file);
+      document.execCommand('insertHTML',false,`<img src="${url}" alt="" style="max-width:100%;border-radius:8px;margin:16px 0;display:block;"/>`);
+      if(ref.current) onChange(ref.current.innerHTML);
+    }catch(err){ alert('Lỗi chèn ảnh: '+err.message); }
+    finally{ setUploading(false); }
+  };
+
+  const handlePaste=(e)=>{
+    const items=e.clipboardData?.items;
+    let imageFile=null;
+    if(items){ for(const item of items){ if(item.type.startsWith('image/')){ imageFile=item.getAsFile(); break; } } }
+    e.preventDefault();
+    if(imageFile){ doInsertImage(imageFile); return; }
+    const text=e.clipboardData.getData('text/plain');
+    document.execCommand('insertText',false,text);
+    if(ref.current) onChange(ref.current.innerHTML);
+  };
+
+  const insertLink=()=>{
+    const url=prompt('Nhập URL liên kết:');
+    if(url) exec('createLink',url);
+  };
+
+  const TOOLS=[
+    {ic:'bold',cmd:'bold',tip:'Đậm (Ctrl+B)'},
+    {ic:'italic',cmd:'italic',tip:'Nghiêng (Ctrl+I)'},
+    {ic:'underline',cmd:'underline',tip:'Gạch chân'},
+    {sep:1},
+    {label:'H2',cmd:'formatBlock',val:'<H2>',tip:'Tiêu đề lớn'},
+    {label:'H3',cmd:'formatBlock',val:'<H3>',tip:'Tiêu đề nhỏ'},
+    {label:'P',cmd:'formatBlock',val:'<P>',tip:'Đoạn văn thường'},
+    {sep:1},
+    {ic:'list-ul',cmd:'insertUnorderedList',tip:'Danh sách chấm'},
+    {ic:'list-ol',cmd:'insertOrderedList',tip:'Danh sách số'},
+    {ic:'quote-left',cmd:'formatBlock',val:'<BLOCKQUOTE>',tip:'Trích dẫn'},
+    {sep:1},
+    {ic:'align-left',cmd:'justifyLeft',tip:'Căn trái'},
+    {ic:'align-center',cmd:'justifyCenter',tip:'Căn giữa'},
+    {sep:1},
+    {ic:'link',cmd:'__link',tip:'Chèn liên kết'},
+    {ic:'eraser',cmd:'removeFormat',tip:'Xóa định dạng'},
+  ];
+
+  return(
+    <Box>
+      <Box sx={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:.2,p:.6,border:'1px solid',borderColor:'divider',borderBottom:'none',borderRadius:'6px 6px 0 0',bgcolor:'action.hover'}}>
+        {TOOLS.map((t,i)=> t.sep
+          ? <Divider key={i} orientation="vertical" flexItem sx={{mx:.4,my:.6}}/>
+          : <Tooltip key={i} title={t.tip}>
+              <IconButton size="small" onMouseDown={e=>e.preventDefault()}
+                onClick={()=>{ if(t.cmd==='__link') insertLink(); else exec(t.cmd,t.val); }}
+                sx={{width:30,height:30,borderRadius:1}}>
+                {t.label?<Typography sx={{fontSize:11,fontWeight:800}}>{t.label}</Typography>:<FA icon={t.ic} style={{fontSize:13}}/>}
+              </IconButton>
+            </Tooltip>
+        )}
+        <Box sx={{flex:1}}/>
+        <Tooltip title="Chèn ảnh từ máy">
+          <IconButton size="small" component="label" sx={{width:30,height:30,borderRadius:1}}>
+            <FA icon="image" style={{fontSize:13}}/>
+            <input type="file" hidden accept="image/*" onChange={e=>{const f=e.target.files[0]; if(f) doInsertImage(f); e.target.value='';}}/>
+          </IconButton>
+        </Tooltip>
+      </Box>
+      <Box sx={{position:'relative'}}>
+        <Box ref={ref} contentEditable suppressContentEditableWarning
+          onInput={handleInput} onPaste={handlePaste} data-placeholder={placeholder}
+          sx={{
+            minHeight:240,maxHeight:480,overflowY:'auto',p:1.75,
+            border:'1px solid',borderColor:'divider',borderRadius:'0 0 6px 6px',
+            fontFamily:"'Be Vietnam Pro',sans-serif",fontSize:14.5,lineHeight:1.7,outline:'none',
+            '&:focus':{borderColor:'primary.main'},
+            '&:empty:before':{content:'attr(data-placeholder)',color:'text.disabled'},
+            '& p':{mb:1.5},
+            '& h2':{fontWeight:800,fontSize:'1.4em',mt:2,mb:1},
+            '& h3':{fontWeight:700,fontSize:'1.2em',mt:1.5,mb:1},
+            '& img':{maxWidth:'100%',borderRadius:1,my:1.5,display:'block'},
+            '& ul,& ol':{pl:3,mb:1.5},
+            '& li':{mb:.5},
+            '& blockquote':{borderLeft:'3px solid',borderColor:'primary.main',pl:2,ml:0,my:1.5,color:'text.secondary',fontStyle:'italic'},
+            '& a':{color:'primary.main',textDecoration:'underline'},
+          }}/>
+        {uploading&&<Box sx={{position:'absolute',top:8,right:8,bgcolor:'rgba(37,99,235,.92)',color:'#fff',borderRadius:1,px:1.2,py:.5,display:'flex',alignItems:'center',gap:.8,boxShadow:2}}>
+          <CircularProgress size={12} color="inherit"/><Typography variant="caption" sx={{fontWeight:600}}>Đang tải ảnh...</Typography>
+        </Box>}
+      </Box>
+      <Typography variant="caption" color="text.disabled" sx={{display:'block',mt:.6}}>
+        💡 Dán ảnh (Ctrl+V) để chèn ngay tại vị trí con trỏ • Định dạng hiển thị ở đây chính là kết quả khi xuất bản
+      </Typography>
+    </Box>
+  );
+}
+
 function ImagePasteZone({images,setImages}){
-  const [uploading,setUploading]=useState(0);
   const [dragOver,setDragOver]=useState(false);
   const [imgUrl,setImgUrl]=useState('');
   const zoneRef=useRef(null);
@@ -1465,8 +1582,6 @@ function ArticleModal({article,onClose,onSave,token}){
   const [form,setForm]=useState(article||{title:'',excerpt:'',content:'',cover:'',category:'huong-dan',author:'MuaBanVe2D',isPublished:true});
   const [saving,setSaving]=useState(false);
   const [coverUploading,setCoverUploading]=useState(false);
-  const [contentUploading,setContentUploading]=useState(false);
-  const contentRef=useRef(null);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
 
   const uploadImage=async(file)=>{
@@ -1499,35 +1614,6 @@ function ArticleModal({article,onClose,onSave,token}){
     finally{ setCoverUploading(false); }
   };
 
-  // Chèn ảnh vào đúng vị trí con trỏ trong ô Nội dung
-  const insertImageAtCursor=async(file)=>{
-    const textarea=contentRef.current;
-    const cursorPos = textarea ? textarea.selectionStart : (form.content||'').length;
-    setContentUploading(true);
-    try{
-      const url=await uploadImage(file);
-      const imgTag=`\n<img src="${url}" alt="" style="max-width:100%;border-radius:8px;margin:16px 0;display:block;"/>\n`;
-      setForm(f=>{
-        const content=f.content||'';
-        return {...f, content: content.slice(0,cursorPos)+imgTag+content.slice(cursorPos)};
-      });
-      setTimeout(()=>{
-        if(textarea){ const p=cursorPos+imgTag.length; textarea.focus(); textarea.setSelectionRange(p,p); }
-      },0);
-    }catch(err){ alert('Lỗi chèn ảnh: '+err.message); }
-    finally{ setContentUploading(false); }
-  };
-  const handleContentPaste=(e)=>{
-    const items=e.clipboardData?.items; if(!items) return;
-    for(const item of items){
-      if(item.type.startsWith('image/')){
-        e.preventDefault();
-        const file=item.getAsFile(); if(file) insertImageAtCursor(file);
-        return;
-      }
-    }
-  };
-
   const save=async()=>{if(!form.title)return alert('Nhập tiêu đề');setSaving(true);
     try{const url=isEdit?`/api/articles?id=${article._id}`:'/api/articles';
       const r=await fetch(url,{method:isEdit?'PUT':'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify(form)});
@@ -1558,20 +1644,9 @@ function ArticleModal({article,onClose,onSave,token}){
       <Grid item xs={12}><TextField fullWidth size="small" label="Tóm tắt" value={form.excerpt||''} onChange={e=>set('excerpt',e.target.value)} multiline rows={2}/></Grid>
 
       <Grid item xs={12}>
-        <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'center',mb:.7}}>
-          <Typography variant="caption" sx={{fontWeight:700,color:'text.secondary'}}><FA icon="file-lines" style={{marginRight:5}}/>Nội dung (hỗ trợ HTML) — dán ảnh (Ctrl+V) để chèn ngay tại vị trí con trỏ</Typography>
-          <Button size="small" component="label" startIcon={<FA icon="image" style={{fontSize:11}}/>} sx={{fontSize:11,py:.2}}>
-            Chèn ảnh<input type="file" hidden accept="image/*" onChange={e=>{const f=e.target.files[0];if(f)insertImageAtCursor(f);e.target.value='';}}/>
-          </Button>
-        </Box>
-        <Box sx={{position:'relative'}}>
-          <TextField fullWidth size="small" value={form.content||''} onChange={e=>set('content',e.target.value)} multiline rows={10}
-            placeholder="<p>Nội dung bài viết...</p>&#10;Đặt con trỏ vào đây rồi dán (Ctrl+V) ảnh để chèn vào đúng vị trí"
-            inputRef={contentRef} onPaste={handleContentPaste}/>
-          {contentUploading&&<Box sx={{position:'absolute',top:8,right:8,bgcolor:'rgba(37,99,235,.92)',color:'#fff',borderRadius:1,px:1.2,py:.5,display:'flex',alignItems:'center',gap:.8,boxShadow:2}}>
-            <CircularProgress size={12} color="inherit"/><Typography variant="caption" sx={{fontWeight:600}}>Đang tải ảnh...</Typography>
-          </Box>}
-        </Box>
+        <Typography variant="caption" sx={{fontWeight:700,color:'text.secondary',display:'block',mb:.7}}><FA icon="file-lines" style={{marginRight:5}}/>Nội dung bài viết</Typography>
+        <RichTextEditor value={form.content} onChange={v=>set('content',v)} onUploadImage={uploadImage}
+          placeholder="Viết nội dung ở đây... dùng thanh công cụ để định dạng (đậm, nghiêng, tiêu đề, danh sách...), dán ảnh (Ctrl+V) để chèn ngay tại vị trí con trỏ"/>
       </Grid>
 
       <Grid item xs={12}><FormControlLabel control={<Checkbox checked={!!form.isPublished} onChange={e=>set('isPublished',e.target.checked)} size="small"/>} label="Công khai"/></Grid>
