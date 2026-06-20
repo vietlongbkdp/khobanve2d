@@ -565,10 +565,8 @@ function HomePage({go,prods}){
         <Stack direction={{xs:'column',sm:'row'}} spacing={1.5} justifyContent="center" sx={{mb:7}} flexWrap="wrap">
           <Button variant="contained" size="large" startIcon={<FA icon="store" style={{fontSize:16}}/>} onClick={()=>go('shop')}
             sx={{background:GRAD.primary,px:4,py:1.6,fontSize:16,boxShadow:'0 8px 30px rgba(37,99,235,.5)','&:hover':{background:GRAD.primary,filter:'brightness(1.1)'}}}>Khám Phá Ngay</Button>
-          <Button variant="outlined" size="large" startIcon={<FA icon="pen-ruler" style={{fontSize:16}}/>} onClick={()=>go('custom')}
+          <Button variant="outlined" size="large" startIcon={<ZaloIcon size={20}/>} onClick={()=>go('custom')}
             sx={{color:'#fff',borderColor:'rgba(96,165,250,.5)',px:4,py:1.6,fontSize:16,':hover':{borderColor:'#60A5FA',bgcolor:'rgba(96,165,250,.08)'}}}>Nhận Vẽ Theo Yêu Cầu</Button>
-          <Button variant="outlined" size="large" startIcon={<FA icon="newspaper" style={{fontSize:16}}/>} onClick={()=>go('content')}
-            sx={{color:'#fff',borderColor:'rgba(255,255,255,.3)',px:4,py:1.6,fontSize:16,':hover':{borderColor:'#fff',bgcolor:'rgba(255,255,255,.06)'}}}>Đọc Bài Chia Sẻ</Button>
         </Stack>
         <Box sx={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:0,maxWidth:640,mx:'auto',bgcolor:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',borderRadius:1.5,overflow:'hidden',backdropFilter:'blur(10px)'}}>
           {STATS.map((s,i)=>(
@@ -729,7 +727,7 @@ function HomePage({go,prods}){
           <Typography sx={{color:'rgba(255,255,255,.85)',mb:3,maxWidth:520,mx:'auto'}}>Chúng tôi nhận vẽ theo yêu cầu riêng: kiến trúc, cơ khí, đồ án môn học, hoa văn lazer...</Typography>
           <Stack direction={{xs:'column',sm:'row'}} spacing={1.5} justifyContent="center">
             <Button variant="contained" size="large" onClick={()=>go('custom')}
-              startIcon={<FA icon="pen-ruler" style={{fontSize:15}}/>}
+              startIcon={<ZaloIcon size={20}/>}
               sx={{bgcolor:'#fff',color:'primary.main',px:4,py:1.5,fontSize:15,'&:hover':{bgcolor:'#F1F5F9'}}}>Đặt Vẽ Theo Yêu Cầu</Button>
             <Button variant="outlined" size="large" href="https://zalo.me/0913331916" target="_blank"
               startIcon={<ZaloIcon size={22}/>}
