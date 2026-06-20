@@ -14,6 +14,58 @@ function safeEqual(a, b) {
   return crypto.timingSafeEqual(ba, bb);
 }
 
+// Gửi email thông báo có yêu cầu vẽ mới qua Resend (không throw nếu lỗi)
+async function sendNotificationEmail(doc) {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || "vietlongbkdp@gmail.com";
+  if (!RESEND_API_KEY) {
+    console.warn("[custom-requests] RESEND_API_KEY chưa cấu hình — bỏ qua gửi email thông báo");
+    return;
+  }
+  const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto">
+      <div style="background:linear-gradient(135deg,#1D4ED8,#2563EB,#0EA5E9);padding:24px;border-radius:10px 10px 0 0">
+        <h2 style="color:#fff;margin:0">📐 Yêu Cầu Vẽ Mới — MuaBanVe2D</h2>
+      </div>
+      <div style="background:#F8FAFC;padding:24px;border-radius:0 0 10px 10px;border:1px solid #E2E8F0">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;color:#0F172A">
+          <tr><td style="padding:6px 0;color:#64748B;width:120px">Họ tên</td><td style="padding:6px 0"><b>${esc(doc.name)}</b></td></tr>
+          <tr><td style="padding:6px 0;color:#64748B">SĐT / Zalo</td><td style="padding:6px 0"><b>${esc(doc.phone)}</b></td></tr>
+          ${doc.email ? `<tr><td style="padding:6px 0;color:#64748B">Email</td><td style="padding:6px 0">${esc(doc.email)}</td></tr>` : ""}
+          <tr><td style="padding:6px 0;color:#64748B">Loại bản vẽ</td><td style="padding:6px 0">${esc(doc.category)}</td></tr>
+          ${doc.budget ? `<tr><td style="padding:6px 0;color:#64748B">Ngân sách</td><td style="padding:6px 0">${esc(doc.budget)}</td></tr>` : ""}
+          ${doc.deadline ? `<tr><td style="padding:6px 0;color:#64748B">Thời hạn</td><td style="padding:6px 0">${esc(doc.deadline)}</td></tr>` : ""}
+        </table>
+        <div style="margin-top:16px;padding:14px;background:#fff;border-radius:8px;border:1px solid #E2E8F0">
+          <div style="color:#64748B;font-size:13px;margin-bottom:6px">Mô tả yêu cầu</div>
+          <div style="white-space:pre-wrap;font-size:14px">${esc(doc.description)}</div>
+        </div>
+        ${doc.referenceImages?.length ? `<div style="margin-top:10px;color:#64748B;font-size:13px">📎 Kèm ${doc.referenceImages.length} ảnh tham khảo</div>` : ""}
+        <a href="https://www.muabanve2d.com/admin" style="display:inline-block;margin-top:18px;background:#2563EB;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Xem trong Trang Quản Trị</a>
+      </div>
+    </div>`;
+
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+      body: JSON.stringify({
+        from: "MuaBanVe2D <onboarding@resend.dev>",
+        to: NOTIFY_EMAIL,
+        subject: `🆕 Yêu cầu vẽ mới từ ${doc.name}`,
+        html,
+      }),
+    });
+    if (!r.ok) {
+      const errBody = await r.text().catch(() => "");
+      console.error("[custom-requests] Resend lỗi:", r.status, errBody);
+    }
+  } catch (e) {
+    console.error("[custom-requests] Gửi email lỗi:", e.message);
+  }
+}
+
 function verifyAdmin(req) {
   const token = (req.headers["authorization"] || "").replace("Bearer ", "").trim();
   if (!token) return false;
@@ -67,6 +119,8 @@ module.exports = async function handler(req,res){
         createdAt:new Date(),
       };
       const r=await col.insertOne(doc);
+      // Gửi email thông báo (không chặn response nếu lỗi)
+      await sendNotificationEmail(doc);
       return res.status(201).json({success:true,_id:r.insertedId});
     }
 
