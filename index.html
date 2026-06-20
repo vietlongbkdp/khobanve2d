@@ -1464,7 +1464,70 @@ function ArticleModal({article,onClose,onSave,token}){
   const isEdit=!!article?._id;
   const [form,setForm]=useState(article||{title:'',excerpt:'',content:'',cover:'',category:'huong-dan',author:'MuaBanVe2D',isPublished:true});
   const [saving,setSaving]=useState(false);
+  const [coverUploading,setCoverUploading]=useState(false);
+  const [contentUploading,setContentUploading]=useState(false);
+  const contentRef=useRef(null);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+
+  const uploadImage=async(file)=>{
+    const fd=new FormData();fd.append('file',file);fd.append('upload_preset','khobanve2d_unsigned');
+    const r=await fetch('https://api.cloudinary.com/v1_1/vietlongbk123/image/upload',{method:'POST',body:fd});
+    const d=await r.json();
+    if(d.secure_url) return d.secure_url;
+    throw new Error(d.error?.message||'Upload thất bại');
+  };
+
+  // Dán ảnh vào ô Ảnh bìa
+  const handleCoverPaste=async(e)=>{
+    const items=e.clipboardData?.items; if(!items) return;
+    for(const item of items){
+      if(item.type.startsWith('image/')){
+        e.preventDefault();
+        const file=item.getAsFile(); if(!file) return;
+        setCoverUploading(true);
+        try{ set('cover', await uploadImage(file)); }
+        catch(err){ alert('Lỗi upload ảnh bìa: '+err.message); }
+        finally{ setCoverUploading(false); }
+        return;
+      }
+    }
+  };
+  const handleCoverFile=async(file)=>{
+    setCoverUploading(true);
+    try{ set('cover', await uploadImage(file)); }
+    catch(err){ alert('Lỗi upload ảnh bìa: '+err.message); }
+    finally{ setCoverUploading(false); }
+  };
+
+  // Chèn ảnh vào đúng vị trí con trỏ trong ô Nội dung
+  const insertImageAtCursor=async(file)=>{
+    const textarea=contentRef.current;
+    const cursorPos = textarea ? textarea.selectionStart : (form.content||'').length;
+    setContentUploading(true);
+    try{
+      const url=await uploadImage(file);
+      const imgTag=`\n<img src="${url}" alt="" style="max-width:100%;border-radius:8px;margin:16px 0;display:block;"/>\n`;
+      setForm(f=>{
+        const content=f.content||'';
+        return {...f, content: content.slice(0,cursorPos)+imgTag+content.slice(cursorPos)};
+      });
+      setTimeout(()=>{
+        if(textarea){ const p=cursorPos+imgTag.length; textarea.focus(); textarea.setSelectionRange(p,p); }
+      },0);
+    }catch(err){ alert('Lỗi chèn ảnh: '+err.message); }
+    finally{ setContentUploading(false); }
+  };
+  const handleContentPaste=(e)=>{
+    const items=e.clipboardData?.items; if(!items) return;
+    for(const item of items){
+      if(item.type.startsWith('image/')){
+        e.preventDefault();
+        const file=item.getAsFile(); if(file) insertImageAtCursor(file);
+        return;
+      }
+    }
+  };
+
   const save=async()=>{if(!form.title)return alert('Nhập tiêu đề');setSaving(true);
     try{const url=isEdit?`/api/articles?id=${article._id}`:'/api/articles';
       const r=await fetch(url,{method:isEdit?'PUT':'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify(form)});
@@ -1474,9 +1537,43 @@ function ArticleModal({article,onClose,onSave,token}){
     <DialogContent dividers><Grid container spacing={2} sx={{mt:.5}}>
       <Grid item xs={12} sm={8}><TextField fullWidth size="small" label="Tiêu đề *" value={form.title||''} onChange={e=>set('title',e.target.value)}/></Grid>
       <Grid item xs={12} sm={4}><FormControl fullWidth size="small"><InputLabel>Danh mục</InputLabel><Select value={form.category} label="Danh mục" onChange={e=>set('category',e.target.value)}>{BLOG_CATS.map(c=><MenuItem key={c.id} value={c.id}>{c.label}</MenuItem>)}</Select></FormControl></Grid>
-      <Grid item xs={12}><TextField fullWidth size="small" label="Ảnh bìa (URL)" value={form.cover||''} onChange={e=>set('cover',e.target.value)} placeholder="https://..."/></Grid>
+
+      <Grid item xs={12}>
+        <Typography variant="caption" sx={{fontWeight:700,color:'text.secondary',display:'block',mb:.7}}><FA icon="image" style={{marginRight:5}}/>Ảnh bìa — dán ảnh (Ctrl+V) hoặc nhập URL</Typography>
+        <Box sx={{display:'flex',gap:1.5,alignItems:'flex-start'}}>
+          {form.cover&&<Box sx={{position:'relative',width:92,height:62,flexShrink:0,borderRadius:1,overflow:'hidden',border:'1.5px solid',borderColor:'divider'}}>
+            <Box component="img" src={form.cover} sx={{width:'100%',height:'100%',objectFit:'cover'}}/>
+            <IconButton size="small" onClick={()=>set('cover','')} sx={{position:'absolute',top:1,right:1,bgcolor:'rgba(239,68,68,.9)',color:'#fff',width:18,height:18,':hover':{bgcolor:'#DC2626'}}}><FA icon="xmark" style={{fontSize:9}}/></IconButton>
+          </Box>}
+          <TextField fullWidth size="small" value={form.cover||''} onChange={e=>set('cover',e.target.value)} onPaste={handleCoverPaste}
+            placeholder="Dán ảnh (Ctrl+V) hoặc dán link https://..."
+            InputProps={{endAdornment:coverUploading
+              ?<InputAdornment position="end"><CircularProgress size={16}/></InputAdornment>
+              :<InputAdornment position="end"><IconButton size="small" component="label"><FA icon="folder-open" style={{fontSize:13}}/>
+                  <input type="file" hidden accept="image/*" onChange={e=>{const f=e.target.files[0];if(f)handleCoverFile(f);e.target.value='';}}/>
+                </IconButton></InputAdornment>}}/>
+        </Box>
+      </Grid>
+
       <Grid item xs={12}><TextField fullWidth size="small" label="Tóm tắt" value={form.excerpt||''} onChange={e=>set('excerpt',e.target.value)} multiline rows={2}/></Grid>
-      <Grid item xs={12}><TextField fullWidth size="small" label="Nội dung (hỗ trợ HTML)" value={form.content||''} onChange={e=>set('content',e.target.value)} multiline rows={8} placeholder="<p>Nội dung bài viết...</p>"/></Grid>
+
+      <Grid item xs={12}>
+        <Box sx={{display:'flex',justifyContent:'space-between',alignItems:'center',mb:.7}}>
+          <Typography variant="caption" sx={{fontWeight:700,color:'text.secondary'}}><FA icon="file-lines" style={{marginRight:5}}/>Nội dung (hỗ trợ HTML) — dán ảnh (Ctrl+V) để chèn ngay tại vị trí con trỏ</Typography>
+          <Button size="small" component="label" startIcon={<FA icon="image" style={{fontSize:11}}/>} sx={{fontSize:11,py:.2}}>
+            Chèn ảnh<input type="file" hidden accept="image/*" onChange={e=>{const f=e.target.files[0];if(f)insertImageAtCursor(f);e.target.value='';}}/>
+          </Button>
+        </Box>
+        <Box sx={{position:'relative'}}>
+          <TextField fullWidth size="small" value={form.content||''} onChange={e=>set('content',e.target.value)} multiline rows={10}
+            placeholder="<p>Nội dung bài viết...</p>&#10;Đặt con trỏ vào đây rồi dán (Ctrl+V) ảnh để chèn vào đúng vị trí"
+            inputRef={contentRef} onPaste={handleContentPaste}/>
+          {contentUploading&&<Box sx={{position:'absolute',top:8,right:8,bgcolor:'rgba(37,99,235,.92)',color:'#fff',borderRadius:1,px:1.2,py:.5,display:'flex',alignItems:'center',gap:.8,boxShadow:2}}>
+            <CircularProgress size={12} color="inherit"/><Typography variant="caption" sx={{fontWeight:600}}>Đang tải ảnh...</Typography>
+          </Box>}
+        </Box>
+      </Grid>
+
       <Grid item xs={12}><FormControlLabel control={<Checkbox checked={!!form.isPublished} onChange={e=>set('isPublished',e.target.checked)} size="small"/>} label="Công khai"/></Grid>
     </Grid></DialogContent>
     <DialogActions sx={{p:2.5}}><Button onClick={onClose} variant="outlined" sx={{color:'text.secondary',borderColor:'divider'}}>Hủy</Button><Button onClick={save} disabled={saving} variant="contained" startIcon={saving?<CircularProgress size={15} color="inherit"/>:<FA icon="floppy-disk"/>} sx={{background:GRAD.primary}}>{saving?'Đang lưu...':'Lưu Bài'}</Button></DialogActions>
