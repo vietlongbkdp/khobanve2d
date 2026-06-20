@@ -1374,6 +1374,7 @@ function RichTextEditor({value,onChange,onUploadImage,placeholder}){
 }
 
 function ImagePasteZone({images,setImages}){
+  const [uploading,setUploading]=useState(0);
   const [dragOver,setDragOver]=useState(false);
   const [imgUrl,setImgUrl]=useState('');
   const zoneRef=useRef(null);
