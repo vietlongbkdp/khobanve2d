@@ -979,12 +979,7 @@ function ShopPage({go,prods,catFilter,setCatFilter,query,setQuery,buy}){
 function ContentPage({go,arts,goArticle}){
   const isMobile=useMediaQuery(t=>t.breakpoints.down('sm'));
   const [catF,setCatF]=useState('all');
-  const SAMPLE=[
-    {_id:'s1',title:'7 thủ thuật AutoCAD giúp vẽ nhanh gấp đôi',excerpt:'Tổng hợp các phím tắt và lệnh ẩn trong AutoCAD mà dân kỹ thuật chuyên nghiệp thường dùng để tăng tốc độ vẽ.',category:'thu-thuat',cover:'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&q=80',author:'MuaBanVe2D',views:1240,createdAt:new Date(Date.now()-86400000*2)},
-    {_id:'s2',title:'Hướng dẫn làm đồ án thiết kế hộp giảm tốc từ A-Z',excerpt:'Quy trình đầy đủ thiết kế hộp giảm tốc 2 cấp: tính toán bánh răng, trục, ổ lăn theo tiêu chuẩn Việt Nam.',category:'do-an',cover:'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80',author:'MuaBanVe2D',views:890,createdAt:new Date(Date.now()-86400000*5)},
-    {_id:'s3',title:'Cách đọc bản vẽ kỹ thuật cho người mới bắt đầu',excerpt:'Giải thích các ký hiệu, hình chiếu, mặt cắt trong bản vẽ kỹ thuật một cách dễ hiểu nhất cho sinh viên.',category:'huong-dan',cover:'https://images.unsplash.com/photo-1487958449943-2429e8be8625?w=800&q=80',author:'MuaBanVe2D',views:2100,createdAt:new Date(Date.now()-86400000*8)},
-  ];
-  const list=arts&&arts.length>0?arts:SAMPLE;
+  const list=Array.isArray(arts)?arts:[];
   const filtered=catF==='all'?list:list.filter(a=>a.category===catF);
   const featured=filtered[0];
   const rest=filtered.slice(1);
