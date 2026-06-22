@@ -1985,22 +1985,33 @@ function AppContent(){
     setPage(p);window.scrollTo(0,0);
     if(p==='home')setBotNav(0);if(p==='shop')setBotNav(1);if(p==='content')setBotNav(2);
   },[]);
-  // Cập nhật title + meta description theo trang (SEO động)
+  // Cập nhật title + meta description + canonical theo trang (SEO động)
   useEffect(()=>{
     const META={
-      home:['MuaBanVe2D — Mua Bán Bản Vẽ AutoCAD, Đồ Án Kỹ Thuật & Vẽ Theo Yêu Cầu','Kho bản vẽ AutoCAD, đồ án môn học, hoa văn lazer CNC. Tải file DWG gốc ngay, giá sinh viên. Nhận vẽ theo yêu cầu.'],
-      shop:['Kho Bản Vẽ AutoCAD & Đồ Án — MuaBanVe2D','Tìm và tải bản vẽ AutoCAD, đồ án môn học, mẫu cổng, hoa văn lazer CNC chất lượng cao. File DWG gốc, giá sinh viên.'],
-      custom:['Nhận Vẽ Bản Vẽ Kỹ Thuật & Đồ Án Theo Yêu Cầu — MuaBanVe2D','Dịch vụ vẽ bản vẽ AutoCAD, đồ án, kiến trúc, cơ khí, hoa văn lazer theo yêu cầu riêng. File CAD chuẩn, đúng tiến độ.'],
-      content:['Chia Sẻ Kiến Thức — Thủ Thuật CAD & Hướng Dẫn Đồ Án — MuaBanVe2D','Thủ thuật AutoCAD, hướng dẫn làm đồ án môn học, kinh nghiệm thiết kế kỹ thuật từ MuaBanVe2D.'],
+      home:['Tải Bản Vẽ CAD 2D Miễn Phí — Bản Vẽ Nhà, Cơ Khí, CNC | MuaBanVe2D','Kho bản vẽ CAD 2D lớn nhất Việt Nam: bản vẽ nhà, cơ khí CNC, đồ án kỹ thuật. Tải file DWG gốc miễn phí, giao nhanh. Nhận vẽ theo yêu cầu trong 24h.'],
+      shop:['Kho Bản Vẽ CAD 2D — Download File DWG Nhà, Cơ Khí, CNC | MuaBanVe2D','Tải miễn phí bản vẽ CAD 2D: bản vẽ nhà cấp 4, cơ khí CNC, cổng sắt, hoa văn lazer. File DWG/DXF chuẩn AutoCAD, tải ngay không cần đăng ký.'],
+      custom:['Vẽ Bản Vẽ Kỹ Thuật Theo Yêu Cầu — Nhận Đặt 24/7 | MuaBanVe2D','Nhận vẽ bản vẽ kỹ thuật AutoCAD theo yêu cầu: bản vẽ nhà, cơ khí, đồ án. Báo giá trong 30 phút, giao file nhanh, giá sinh viên từ 50.000đ.'],
+      content:['Kiến Thức Bản Vẽ CAD — Hướng Dẫn Đọc & Vẽ Kỹ Thuật | MuaBanVe2D','Hướng dẫn đọc bản vẽ cơ khí, bản vẽ nhà, AutoCAD cho người mới. Chia sẻ kinh nghiệm, tips CAD thực tế từ kỹ sư MuaBanVe2D.'],
     };
     let title, desc;
     if(page==='detail'&&prod){ title=`${prod.title} — MuaBanVe2D`; desc=(prod.desc||prod.description||'Bản vẽ kỹ thuật chất lượng cao tại MuaBanVe2D').slice(0,160); }
-    else if(page==='article'&&article){ title=`${article.title} — MuaBanVe2D`; desc=(article.excerpt||'').slice(0,160); }
-    else { const m=META[page]||META.home; title=m[0]; desc=m[1]; }
+    else if(page==='article'&&article){ title=`${article.title} — MuaBanVe2D`; desc=(article.summary||article.content||'').slice(0,160); }
+    else{ const m=META[page]||META.home; title=m[0]; desc=m[1]; }
     document.title=title;
     let md=document.querySelector('meta[name="description"]');
     if(md) md.setAttribute('content',desc);
-  },[page,prod,article]);
+    // Canonical động theo trang
+    const CMAP={home:'https://www.muabanve2d.com/',shop:'https://www.muabanve2d.com/kho-ban-ve',custom:'https://www.muabanve2d.com/ve-theo-yeu-cau',content:'https://www.muabanve2d.com/kien-thuc'};
+    const canonUrl=(page==='detail'&&prod)?'https://www.muabanve2d.com/ban-ve/'+(prod.id||prod.slug):(page==='article'&&article)?'https://www.muabanve2d.com/bai-viet/'+(article.slug||article.id):(CMAP[page]||'https://www.muabanve2d.com/');
+    let cl=document.querySelector('link[rel="canonical"]');
+    if(!cl){cl=document.createElement('link');cl.rel='canonical';document.head.appendChild(cl);}
+    cl.setAttribute('href',canonUrl);
+    const ogUrl=document.querySelector('meta[property="og:url"]');if(ogUrl)ogUrl.setAttribute('content',canonUrl);
+    const ogTitle=document.querySelector('meta[property="og:title"]');if(ogTitle)ogTitle.setAttribute('content',title);
+    const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc)ogDesc.setAttribute('content',desc);
+    const twTitle=document.querySelector('meta[name="twitter:title"]');if(twTitle)twTitle.setAttribute('content',title);
+    const twDesc=document.querySelector('meta[name="twitter:description"]');if(twDesc)twDesc.setAttribute('content',desc);
+  },[page,prod,article])
   const goArticle=useCallback(a=>{setArticle(a);setPage('article');window.scrollTo(0,0);},[]);
   const buy=useCallback(p=>{const oid=genOid();setOrder({id:oid,prod:p});setPayState('waiting');setPage('pay');window.scrollTo(0,0);},[]);
   return(<>
