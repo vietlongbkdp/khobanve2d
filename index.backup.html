@@ -546,18 +546,15 @@ function Lightbox({imgs,startIdx,onClose}){
 
 // ══ PRODUCT CARD ══
 // ══ WATERMARK — phủ "MUABANVE2D.COM" lên ảnh sản phẩm chống đánh cắp ảnh ══
-function Watermark({opacity=1}){
-  const rawId=useId();
-  const uid='wm'+rawId.replace(/[^a-zA-Z0-9]/g,'');
+function Watermark({opacity=.16}){
   return(
-    <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,opacity}} xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id={uid} width="230" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-28)">
-          <text x="0" y="70" fontFamily="'Be Vietnam Pro',Arial,sans-serif" fontSize="17" fontWeight="800" letterSpacing="1.5"
-            fill="rgba(255,255,255,.38)" stroke="rgba(0,0,0,.32)" strokeWidth="3" paintOrder="stroke">MUABANVE2D.COM</text>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill={`url(#${uid})`}/>
+    <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2}}
+      viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <text x="50" y="52" textAnchor="middle" transform="rotate(-20 50 50)"
+        fontFamily="'Be Vietnam Pro',Arial,sans-serif" fontSize="6" fontWeight="700" letterSpacing="0.3"
+        fill={`rgba(255,255,255,${opacity})`} stroke={`rgba(0,0,0,${opacity*0.6})`} strokeWidth="0.3" paintOrder="stroke">
+        MUABANVE2D.COM
+      </text>
     </svg>
   );
 }
