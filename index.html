@@ -435,6 +435,19 @@ const sanitizeHtml = (html) => {
     .replace(/javascript\s*:/gi,'');
 };
 const genOid = () => 'KBV'+Date.now().toString(36).toUpperCase().slice(-6);
+// Map slug URL sạch (sitemap.xml) ↔ page/category nội bộ
+const PAGE_TO_PATH = {home:'/', shop:'/kho-ban-ve', custom:'/ve-theo-yeu-cau', content:'/kien-thuc'};
+const CAT_SLUG = {'kien-truc':'kien-truc','co-khi-cnc':'co-khi','cong':'cong','lazer':'lazer','do-an':'do-an','xay-dung':'xay-dung'};
+const CAT_SLUG_REV = Object.fromEntries(Object.entries(CAT_SLUG).map(([slug,id])=>[id,slug]));
+function parseRoute(){
+  const path=(window.location.pathname||'/').replace(/\/+$/,'')||'/';
+  if(path==='/kho-ban-ve') return {page:'shop',cat:'all'};
+  const m=path.match(/^\/kho-ban-ve\/([a-z0-9-]+)$/);
+  if(m&&CAT_SLUG[m[1]]) return {page:'shop',cat:CAT_SLUG[m[1]]};
+  if(path==='/ve-theo-yeu-cau') return {page:'custom',cat:'all'};
+  if(path==='/kien-thuc') return {page:'content',cat:'all'};
+  return {page:'home',cat:'all'};
+}
 const fmtBytes = b => b<1024?b+'B':b<1048576?(b/1024).toFixed(0)+'kB':(b/1048576).toFixed(1)+'MB';
 const timeAgo = d => {
   const s=Math.floor((Date.now()-new Date(d))/1000);
@@ -1987,8 +2000,9 @@ function AdminPage(){
 // ══ APP ROOT ══
 function AppContent(){
   if(window.location.pathname.toLowerCase().startsWith('/admin')) return <AdminPage/>;
-  const [page,setPage]=useState('home');
-  const [catFilter,setCatFilter]=useState('all');
+  const initialRoute=useMemo(()=>parseRoute(),[]);
+  const [page,setPage]=useState(initialRoute.page);
+  const [catFilter,setCatFilter]=useState(initialRoute.cat);
   const [query,setQuery]=useState('');
   const [prod,setProd]=useState(null);
   const [article,setArticle]=useState(null);
@@ -1997,11 +2011,25 @@ function AppContent(){
   const {prods,loading:prodsLoading}=useProducts();
   const {arts,loading:artsLoading}=useArticles();
   const isMobile=useMediaQuery(t=>t.breakpoints.down('sm'));
-  const [botNav,setBotNav]=useState(0);
+  const [botNav,setBotNav]=useState(initialRoute.page==='shop'?1:initialRoute.page==='content'?2:0);
   const go=useCallback((p,data=null)=>{
     if(data)setProd(data);
     setPage(p);window.scrollTo(0,0);
     if(p==='home')setBotNav(0);if(p==='shop')setBotNav(1);if(p==='content')setBotNav(2);
+    const path=PAGE_TO_PATH[p];
+    if(path&&window.location.pathname!==path) window.history.pushState({},'',path);
+  },[]);
+  // Đổi danh mục trong Shop → đồng bộ URL /kho-ban-ve/:slug
+  useEffect(()=>{
+    if(page!=='shop') return;
+    const path=catFilter==='all'?'/kho-ban-ve':`/kho-ban-ve/${CAT_SLUG_REV[catFilter]||catFilter}`;
+    if(window.location.pathname!==path) window.history.replaceState({},'',path);
+  },[page,catFilter]);
+  // Nút Back/Forward trình duyệt → đồng bộ lại page/catFilter theo URL
+  useEffect(()=>{
+    const onPop=()=>{const r=parseRoute();setPage(r.page);setCatFilter(r.cat);window.scrollTo(0,0);};
+    window.addEventListener('popstate',onPop);
+    return()=>window.removeEventListener('popstate',onPop);
   },[]);
   // Cập nhật title + meta description + canonical theo trang (SEO động)
   useEffect(()=>{
