@@ -164,7 +164,7 @@ const {
   Tabs,Tab,Switch,FormControlLabel,Checkbox,InputAdornment,Fab,Tooltip,Rating,Collapse,
   ThemeProvider,createTheme,CssBaseline,useMediaQuery,alpha,
 } = MaterialUI;
-const {useState,useEffect,useCallback,useRef,useMemo,createContext,useContext} = React;
+const {useState,useEffect,useCallback,useRef,useMemo,useId,createContext,useContext} = React;
 
 // ══ ICONS8 (Fluency colorful icons via CDN) ══
 const I8 = ({name,size=24,style,alt=''}) =>
@@ -511,12 +511,16 @@ function Lightbox({imgs,startIdx,onClose}){
         <IconButton onClick={onClose} sx={{color:'#fff',bgcolor:'rgba(255,255,255,.1)'}} size="small"><FA icon="xmark"/></IconButton>
       </Box>
       <Box sx={{flex:1,width:'100%',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}} onWheel={onWheel}>
-        <img src={imgs[idx]} alt="" onMouseDown={onMD}
-          onDoubleClick={()=>{if(zoom===1)setZoom(2.5);else{setZoom(1);setPos({x:0,y:0});}}}
-          style={{maxWidth:'100vw',maxHeight:'calc(100vh - 136px)',objectFit:'contain',
-            transform:`scale(${zoom}) translate(${pos.x/zoom}px,${pos.y/zoom}px)`,transformOrigin:'center',
-            transition:drag?'none':'transform .15s ease',cursor:zoom>1?(drag?'grabbing':'grab'):'zoom-in',
-            userSelect:'none',display:'block'}} draggable={false}/>
+        <Box sx={{position:'relative',maxWidth:'100vw',maxHeight:'calc(100vh - 136px)',
+          transform:`scale(${zoom}) translate(${pos.x/zoom}px,${pos.y/zoom}px)`,transformOrigin:'center',
+          transition:drag?'none':'transform .15s ease',display:'inline-block'}}>
+          <img src={imgs[idx]} alt="" onMouseDown={onMD}
+            onDoubleClick={()=>{if(zoom===1)setZoom(2.5);else{setZoom(1);setPos({x:0,y:0});}}}
+            style={{maxWidth:'100vw',maxHeight:'calc(100vh - 136px)',objectFit:'contain',
+              cursor:zoom>1?(drag?'grabbing':'grab'):'zoom-in',
+              userSelect:'none',display:'block'}} draggable={false}/>
+          <Watermark/>
+        </Box>
       </Box>
       {idx>0&&zoom===1&&<IconButton onClick={e=>{e.stopPropagation();setIdx(i=>i-1);}} size="large" sx={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'#fff',bgcolor:'rgba(255,255,255,.12)'}}><FA icon="chevron-left"/></IconButton>}
       {idx<imgs.length-1&&zoom===1&&<IconButton onClick={e=>{e.stopPropagation();setIdx(i=>i+1);}} size="large" sx={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',color:'#fff',bgcolor:'rgba(255,255,255,.12)'}}><FA icon="chevron-right"/></IconButton>}
@@ -528,13 +532,29 @@ function Lightbox({imgs,startIdx,onClose}){
 }
 
 // ══ PRODUCT CARD ══
+// ══ WATERMARK — phủ "MUABANVE2D.COM" lên ảnh sản phẩm chống đánh cắp ảnh ══
+function Watermark({opacity=1}){
+  const rawId=useId();
+  const uid='wm'+rawId.replace(/[^a-zA-Z0-9]/g,'');
+  return(
+    <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,opacity}} xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id={uid} width="230" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-28)">
+          <text x="0" y="70" fontFamily="'Be Vietnam Pro',Arial,sans-serif" fontSize="17" fontWeight="800" letterSpacing="1.5"
+            fill="rgba(255,255,255,.38)" stroke="rgba(0,0,0,.32)" strokeWidth="3" paintOrder="stroke">MUABANVE2D.COM</text>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill={`url(#${uid})`}/>
+    </svg>
+  );
+}
+
 function ProductCard({p,onOpen}){
   const cat=catOf(p.cat||p.category);
   const isFree=p.free||p.isFree;
   const price=p.price||0;
   const op=p.oldPrice||p.originalPrice||null;
   const disc=op&&price?Math.round((1-price/op)*100):0;
-  const dl=p.dl||p.downloadCount||0;
   const imgs=p.images&&p.images.length>0?p.images:null;
   return(
     <Card className="kbv-card kbv-card-depth" onClick={()=>onOpen(p)} sx={{height:'100%',display:'flex',flexDirection:'column',cursor:'pointer',overflow:'hidden',
@@ -545,6 +565,7 @@ function ProductCard({p,onOpen}){
           ?<Box component="img" src={imgs[0]} alt={p.title} sx={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',transition:'transform .5s','.kbv-card:hover &':{transform:'scale(1.08)'}}}/>
           :<Box sx={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}><FA icon={cat.fa} style={{fontSize:40,color:'rgba(255,255,255,.6)'}}/></Box>}
         <Box sx={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(15,23,42,.6) 0%,transparent 50%)',pointerEvents:'none'}}/>
+        {imgs&&<Watermark/>}
         <Box sx={{position:'absolute',bottom:8,left:8}}>
           <Chip size="small" label={cat.label} sx={{bgcolor:'rgba(15,23,42,.72)',color:'#fff',fontWeight:700,fontSize:11,height:23,backdropFilter:'blur(6px)'}}/>
         </Box>
@@ -554,9 +575,6 @@ function ProductCard({p,onOpen}){
           {!isFree&&(p.hot||p.isHot)&&<Chip label="🔥 HOT" size="small" sx={{background:GRAD.orange,color:'#fff',fontSize:11,fontWeight:800,height:23}}/>}
         </Box>
         {disc>0&&<Chip label={`-${disc}%`} size="small" sx={{position:'absolute',top:8,right:8,background:GRAD.pink,color:'#fff',fontSize:11,fontWeight:800,height:23}}/>}
-        <Box sx={{position:'absolute',bottom:8,right:8,bgcolor:'rgba(15,23,42,.55)',borderRadius:1,px:.8,py:.2,backdropFilter:'blur(6px)'}}>
-          <Typography sx={{color:'#fff',fontSize:11,fontWeight:600,display:'flex',alignItems:'center',gap:.4}}><FA icon="download" style={{fontSize:10}}/>{dl.toLocaleString()}</Typography>
-        </Box>
       </Box>
       <CardContent sx={{flex:1,display:'flex',flexDirection:'column',p:1.75}}>
         <Typography sx={{fontWeight:700,fontSize:14,lineHeight:1.45,mb:1,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',minHeight:40}}>{p.title}</Typography>
@@ -1239,7 +1257,6 @@ function DetailPage({prod,go,buy,prods=[]}){
   const isFree=prod.free||prod.isFree;
   const price=prod.price||0;
   const op=prod.oldPrice||prod.originalPrice||null;
-  const dl=prod.dl||prod.downloadCount||0;
   const rate=prod.rate||prod.rating||5;
   const rev=prod.rev||prod.reviewCount||0;
   const fc=prod.fileCount||prod.fc||0;
@@ -1257,13 +1274,14 @@ function DetailPage({prod,go,buy,prods=[]}){
         <Grid item xs={12} md={6}>
           <Box onClick={()=>setLb(sel)} sx={{borderRadius:1.5,overflow:'hidden',mb:1.5,cursor:'zoom-in',position:'relative',paddingTop:'70%',background:cat.grad}}>
             <Box component="img" src={allImgs[Math.min(sel,allImgs.length-1)]} alt={prod.title} sx={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+            <Watermark/>
             <Chip icon={<FA icon="magnifying-glass-plus" style={{fontSize:11,color:'#fff'}}/>} label="Xem ảnh to" sx={{position:'absolute',bottom:12,right:12,bgcolor:'rgba(0,0,0,.55)',color:'#fff',fontWeight:600,backdropFilter:'blur(6px)'}}/>
           </Box>
           {allImgs.length>1&&<Stack direction="row" spacing={1} sx={{flexWrap:'wrap',gap:1,mb:2}}>
             {allImgs.map((img,i)=><Box key={i} onClick={()=>setSel(i)} sx={{width:70,height:54,borderRadius:.75,overflow:'hidden',cursor:'pointer',flexShrink:0,border:sel===i?'2.5px solid':'2px solid',borderColor:sel===i?'primary.main':'divider'}}><Box component="img" src={img} sx={{width:'100%',height:'100%',objectFit:'cover'}}/></Box>)}
           </Stack>}
           <Grid container spacing={1.5}>
-            {[['file-lines',`${fc} files`,'Số file'],['download',dl.toLocaleString(),'Lượt tải'],['star',`${rate}/5`,'Đánh giá'],['floppy-disk',prod.ft||prod.fileType||'DWG','Định dạng'],...(prod.fileSize?[['weight-hanging',prod.fileSize,'Dung lượng']]:[])].map(([ic,v,l])=>(
+            {[['file-lines',`${fc} files`,'Số file'],['star',`${rate}/5`,'Đánh giá'],['floppy-disk',prod.ft||prod.fileType||'DWG','Định dạng'],...(prod.fileSize?[['weight-hanging',prod.fileSize,'Dung lượng']]:[])].map(([ic,v,l])=>(
               <Grid item xs={6} sm={4} key={l}><Paper elevation={0} sx={{p:1.5,borderRadius:1.25,border:'1px solid',borderColor:'divider',textAlign:'center'}}>
                 <FA icon={ic} style={{fontSize:16,color:'#2563EB',marginBottom:4}}/>
                 <Typography variant="caption" sx={{display:'block',color:'text.secondary',fontSize:10,mb:.3}}>{l}</Typography>
